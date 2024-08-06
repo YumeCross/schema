@@ -1,0 +1,5 @@
+{
+  "import": [
+    "YumeCross/schema/lib"
+  ]
+}
