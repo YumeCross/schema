@@ -1,44 +1,56 @@
-/// Creates a new `Schema` instance based on the provided `type_name`.
+/// Creates new schema.
 /// 
 /// # Parameters
 /// 
 /// - `type_name` : A string representing the type of the schema. Valid values are "array", "boolean", "null", "number", "object", and "string".
 /// 
-/// # Returns
-/// 
-/// A `Schema` instance initialized according to the specified `type_name`.
-/// 
-/// # Errors
-/// 
-/// The function will panic if the `type_name` is not one of the valid values.
+/// @alert unsafe "Panic if invalid `type_name` is recevied."
 pub fn Schema::new(type_name : String) -> Schema {
+  let medium = {
+    type_name,
+    control: None,
+    constraint: None,
+    typed_constraints: NullTy,
+    content: {  },
+  }
   match type_name {
-    "array" =>
-      { type_name, type_content: ArrayTy(ArrayContent::new()), content: {  } }
-    "boolean" => { type_name, type_content: BoolTy, content: {  } }
-    "null" => { type_name, type_content: NullTy, content: {  } }
+    "array" => { ..medium, typed_constraints: ArrayTy(ArrayConstraint::new()) }
+    "boolean" => { ..medium, typed_constraints: BoolTy }
+    "null" => medium
     "number" =>
-      { type_name, type_content: NumberTy(NumberContent::new()), content: {  } }
+      { ..medium, typed_constraints: NumberTy(NumberConstraint::new()) }
     "object" =>
-      { type_name, type_content: ObjectTy(ObjectContent::new()), content: {  } }
+      { ..medium, typed_constraints: ObjectTy(ObjectConstraint::new()) }
     "string" =>
-      { type_name, type_content: StringTy(StringContent::new()), content: {  } }
+      { ..medium, typed_constraints: StringTy(StringConstraint::new()) }
     _ => panic()
   }
 }
 
+/// Return the '$id' property from the schema Json.
+/// 
+/// @alert unsafe "Panic if not exist"
 pub fn id(self : Schema) -> String {
   self.content["$id"].unwrap().as_string().unwrap()
 }
 
+/// Return the '$comment' property from the schema Json.
+///
+/// @alert unsafe "Panic if not exist"
 pub fn comment(self : Schema) -> String {
   self.content["$comment"].unwrap().as_string().unwrap()
 }
 
+/// Return the 'title' property from the schema Json.
+/// 
+/// @alert unsafe "Panic if not exist"
 pub fn title(self : Schema) -> String {
   self.content["title"].unwrap().as_string().unwrap()
 }
 
+/// Return the 'description' property from the schema Json.
+///
+/// @alert unsafe "Panic if not exist"
 pub fn description(self : Schema) -> String {
   self.content["description"].unwrap().as_string().unwrap()
 }

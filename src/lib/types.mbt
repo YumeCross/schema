@@ -1,37 +1,58 @@
 pub struct Schema {
   type_name : String
-  type_content : SchemaContent
+  control : SchemaControl?
+  constraint : SchemaConstraint?
+  typed_constraints : TypedSchemaConstraint
   content : Map[String, @json.JsonValue]
 }
 
-pub enum SchemaContent {
-  BoolTy
-  NullTy
-  ArrayTy(ArrayContent)
-  NumberTy(NumberContent)
-  ObjectTy(ObjectContent)
-  StringTy(StringContent)
+pub struct SchemaControl {
+  if_ : Schema
+  then : Schema?
+  else_ : Schema?
 }
 
-struct ArrayContent {
+pub fn SchemaControl::new() -> SchemaControl {
+  { if_: Schema::new("null"), then: None, else_: None }
+}
+
+pub struct SchemaConstraint {
+  const : (@json.JsonValue?, Schema?)
+  enum_ : Array[(@json.JsonValue?, Schema?)]?
+}
+
+pub fn SchemaConstraint::new() -> SchemaConstraint {
+  { const: (None, None), enum_: None }
+}
+
+pub enum TypedSchemaConstraint {
+  BoolTy
+  NullTy
+  ArrayTy(ArrayConstraint)
+  NumberTy(NumberConstraint)
+  ObjectTy(ObjectConstraint)
+  StringTy(StringConstraint)
+}
+
+struct ArrayConstraint {
   items : (Schema?, Array[Schema]?)
   minItems : UInt
   maxItems : UInt?
   uniqueItems : Bool
 }
 
-pub fn ArrayContent::new() -> ArrayContent {
+pub fn ArrayConstraint::new() -> ArrayConstraint {
   { items: (None, None), minItems: 0, maxItems: None, uniqueItems: false }
 }
 
-struct NumberContent {
+struct NumberConstraint {
   minimum : Double?
   exclusiveMinimum : Double?
   maximum : Double?
   exclusiveMaximum : Double?
 }
 
-pub fn NumberContent::new() -> NumberContent {
+pub fn NumberConstraint::new() -> NumberConstraint {
   {
     minimum: None,
     exclusiveMinimum: None,
@@ -40,7 +61,7 @@ pub fn NumberContent::new() -> NumberContent {
   }
 }
 
-struct ObjectContent {
+struct ObjectConstraint {
   properties : Properties
   definitions : Definitions?
   required : Array[String]
@@ -52,28 +73,28 @@ struct ObjectContent {
   maxProperties : UInt?
 }
 
-pub fn ObjectContent::new() -> ObjectContent {
+pub fn ObjectConstraint::new() -> ObjectConstraint {
   {
-    properties: {},
+    properties: {  },
     definitions: None,
     required: [],
     additionalProperties: (true, None),
     patternProperties: None,
-    dependencies: ({}, None),
+    dependencies: ({  }, None),
     propertyNames: None,
     minProperties: 0,
     maxProperties: None,
   }
 }
 
-struct StringContent {
+struct StringConstraint {
   format : String?
   pattern : String?
   minLength : UInt
   maxLength : UInt?
 }
 
-pub fn StringContent::new() -> StringContent {
+pub fn StringConstraint::new() -> StringConstraint {
   { format: None, pattern: None, minLength: 0, maxLength: None }
 }
 
@@ -84,3 +105,11 @@ pub type Property Schema
 pub typealias Properties = Map[String, Property]
 
 pub typealias Definitions = Map[String, Definition]
+
+enum ErrorData {
+  InvalidJson(@json.ParseError)
+  InvalidSchema(String)
+  InvalidType(String)
+} derive(Eq)
+
+pub type! ParseError ErrorData
