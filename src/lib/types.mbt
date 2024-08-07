@@ -2,7 +2,7 @@ pub struct Schema {
   type_name : String
   control : SchemaControl?
   constraint : SchemaConstraint?
-  typed_constraints : TypedSchemaConstraint
+  typed_constraint : TypedSchemaConstraint
   content : Map[String, @json.JsonValue]
 }
 
@@ -36,8 +36,8 @@ pub enum TypedSchemaConstraint {
 
 struct ArrayConstraint {
   items : (Schema?, Array[Schema]?)
-  minItems : UInt
-  maxItems : UInt?
+  minItems : UInt64
+  maxItems : UInt64?
   uniqueItems : Bool
 }
 
@@ -90,8 +90,8 @@ pub fn ObjectConstraint::new() -> ObjectConstraint {
 struct StringConstraint {
   format : String?
   pattern : String?
-  minLength : UInt
-  maxLength : UInt?
+  minLength : UInt64
+  maxLength : UInt64?
 }
 
 pub fn StringConstraint::new() -> StringConstraint {
@@ -109,7 +109,41 @@ pub typealias Definitions = Map[String, Definition]
 enum ErrorData {
   InvalidJson(@json.ParseError)
   InvalidSchema(String)
-  InvalidType(String)
+  InvalidMemberType(String, String, String)
+  InvalidItemType(String)
 } derive(Eq)
 
-pub type! ParseError ErrorData
+pub type! ParseError ErrorData derive(Eq)
+
+fn ParseError::make_member_type_error(
+  member : String,
+  specified_ty : String,
+  ty : String
+) -> ParseError {
+  ParseError(InvalidMemberType(member, specified_ty, ty))
+}
+
+pub fn to_string(self : ErrorData) -> String {
+  match self {
+    InvalidItemType(s) => s
+    InvalidJson(e) => e.to_string()
+    InvalidMemberType(member, specified_ty, ty) =>
+      "Expect a '\{specified_ty}' for member '\{member}', got \{ty}"
+    InvalidSchema(s) => s
+  }
+}
+
+pub impl Show for ErrorData with output(self, logger) {
+  logger.write_string(self.to_string())
+}
+
+pub fn ParseError::to_string(self : ParseError) -> String {
+  match self {
+    ParseError(e) => e.to_string()
+  }
+}
+
+pub impl Show for ParseError with output(self, logger) {
+  logger.write_string(self.to_string())
+}
+

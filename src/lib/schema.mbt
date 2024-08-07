@@ -10,19 +10,19 @@ pub fn Schema::new(type_name : String) -> Schema {
     type_name,
     control: None,
     constraint: None,
-    typed_constraints: NullTy,
+    typed_constraint: NullTy,
     content: {  },
   }
   match type_name {
-    "array" => { ..medium, typed_constraints: ArrayTy(ArrayConstraint::new()) }
-    "boolean" => { ..medium, typed_constraints: BoolTy }
+    "array" => { ..medium, typed_constraint: ArrayTy(ArrayConstraint::new()) }
+    "boolean" => { ..medium, typed_constraint: BoolTy }
     "null" => medium
     "number" =>
-      { ..medium, typed_constraints: NumberTy(NumberConstraint::new()) }
+      { ..medium, typed_constraint: NumberTy(NumberConstraint::new()) }
     "object" =>
-      { ..medium, typed_constraints: ObjectTy(ObjectConstraint::new()) }
+      { ..medium, typed_constraint: ObjectTy(ObjectConstraint::new()) }
     "string" =>
-      { ..medium, typed_constraints: StringTy(StringConstraint::new()) }
+      { ..medium, typed_constraint: StringTy(StringConstraint::new()) }
     _ => panic()
   }
 }
