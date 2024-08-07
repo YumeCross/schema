@@ -8,6 +8,7 @@
 pub fn Schema::new(type_name : String) -> Schema {
   let medium = {
     type_name,
+    ref: None,
     control: None,
     constraint: None,
     typed_constraint: NullTy,

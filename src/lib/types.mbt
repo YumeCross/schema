@@ -1,7 +1,8 @@
 pub struct Schema {
   type_name : String
+  ref : String?
   control : SchemaControl?
-  constraint : SchemaConstraint?
+  constraint : ValueConstraint?
   typed_constraint : TypedSchemaConstraint
   content : Map[String, @json.JsonValue]
 }
@@ -16,13 +17,13 @@ pub fn SchemaControl::new() -> SchemaControl {
   { if_: Schema::new("null"), then: None, else_: None }
 }
 
-pub struct SchemaConstraint {
-  const : (@json.JsonValue?, Schema?)
-  enum_ : Array[(@json.JsonValue?, Schema?)]?
+pub struct ValueConstraint {
+  const : @json.JsonValue?
+  enum_ : Array[@json.JsonValue]?
 }
 
-pub fn SchemaConstraint::new() -> SchemaConstraint {
-  { const: (None, None), enum_: None }
+pub fn ValueConstraint::new() -> ValueConstraint {
+  { const: None, enum_: None }
 }
 
 pub enum TypedSchemaConstraint {
@@ -36,8 +37,8 @@ pub enum TypedSchemaConstraint {
 
 struct ArrayConstraint {
   items : (Schema?, Array[Schema]?)
-  minItems : UInt64
-  maxItems : UInt64?
+  minItems : Int
+  maxItems : Int?
   uniqueItems : Bool
 }
 
@@ -61,16 +62,21 @@ pub fn NumberConstraint::new() -> NumberConstraint {
   }
 }
 
+enum StringArrayOrSchema {
+  StringArray(Array[String])
+  Schema(Schema)
+}
+
 struct ObjectConstraint {
   properties : Properties
   definitions : Definitions?
   required : Array[String]
   additionalProperties : (Bool, Schema?)
-  patternProperties : Schema?
-  dependencies : (Map[String, Array[String]], Schema?)
+  patternProperties : Properties?
+  dependencies : Map[String, StringArrayOrSchema]?
   propertyNames : Schema?
-  minProperties : UInt
-  maxProperties : UInt?
+  minProperties : Int
+  maxProperties : Int?
 }
 
 pub fn ObjectConstraint::new() -> ObjectConstraint {
@@ -80,7 +86,7 @@ pub fn ObjectConstraint::new() -> ObjectConstraint {
     required: [],
     additionalProperties: (true, None),
     patternProperties: None,
-    dependencies: ({  }, None),
+    dependencies: None,
     propertyNames: None,
     minProperties: 0,
     maxProperties: None,
@@ -90,8 +96,8 @@ pub fn ObjectConstraint::new() -> ObjectConstraint {
 struct StringConstraint {
   format : String?
   pattern : String?
-  minLength : UInt64
-  maxLength : UInt64?
+  minLength : Int
+  maxLength : Int?
 }
 
 pub fn StringConstraint::new() -> StringConstraint {
@@ -128,7 +134,7 @@ pub fn to_string(self : ErrorData) -> String {
     InvalidItemType(s) => s
     InvalidJson(e) => e.to_string()
     InvalidMemberType(member, specified_ty, ty) =>
-      "Expect a '\{specified_ty}' for member '\{member}', got \{ty}"
+      "Expect \{specified_ty} for member '\{member}', got \{ty}"
     InvalidSchema(s) => s
   }
 }
@@ -146,4 +152,3 @@ pub fn ParseError::to_string(self : ParseError) -> String {
 pub impl Show for ParseError with output(self, logger) {
   logger.write_string(self.to_string())
 }
-
