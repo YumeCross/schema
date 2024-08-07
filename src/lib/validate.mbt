@@ -23,9 +23,25 @@ test "type_name" {
 
 pub fn validate(self : ValueConstraint, value : @json.JsonValue) -> Bool {
   let mut valid = true
-  self.const.map(fn(const) { valid = value == const }) |> ignore
-  self.enum_.map(fn(arr) { arr.each(fn(val) { valid = value == val }) })
+  self.const.map(fn(const) {
+    valid = value == const
+  }) |> ignore
+  self.enum_.map(fn(arr) {
+    valid = false
+    arr.each(fn(val) {
+      if value == val { valid = true }
+    }) })
   |> ignore
+  valid
+}
+
+pub fn validate(self : ArrayConstraint, value: Array[@json.JsonValue]) -> Bool {
+  let mut valid = true
+  valid = self.minItems <= value.length()
+  self.maxItems.map(fn(max) {
+    valid = max >= value.length()
+  }) |> ignore
+  // TODO
   valid
 }
 
@@ -40,6 +56,10 @@ pub fn validate(self : NumberConstraint, value : Double) -> Bool {
 
 pub fn validate(self : StringConstraint, value : String) -> Bool {
   let mut valid = true
+  valid = self.minLength < value.length()
+  self.maxLength.map(fn(maxLen) { valid = value.length() < maxLen }) |> ignore
+  if valid.not() { return false }
+
   self.format.map(
     fn(format) {
       // TODO: Check format after regex is support
@@ -54,8 +74,28 @@ pub fn validate(self : StringConstraint, value : String) -> Bool {
     },
   )
   |> ignore
-  valid = self.minLength < value.length()
-  self.maxLength.map(fn(maxLen) { valid = value.length() < maxLen }) |> ignore
+  valid
+}
+
+pub fn validate(self : ObjectConstraint, value : Map[String, @json.JsonValue]) -> Bool {
+  let mut valid = true
+  let keys = value.keys().collect()
+  let propKeys = self.properties.keys().collect()
+  valid = self.minProperties <= keys.length()
+  self.maxProperties.map(
+    fn(max) { valid = max >= keys.length() }
+  ) |> ignore
+  if valid.not() { return false }
+  let mut key = propKeys[0]
+  for i = 0; i < propKeys.length(); i = i + 1 {
+    key = propKeys[i]
+    let val = value[key].map_or_else(fn() {
+      valid = false; None
+    }, fn (val) { Some(val) })
+    if valid.not() { return false }
+    valid = self.properties[key].unwrap().0.validate(val.unwrap())
+  }
+  // TODO: Complete
   valid
 }
 
@@ -71,8 +111,16 @@ pub fn validate(self : Schema, value : @json.JsonValue) -> Bool {
   match self.typed_constraint {
     NullTy => ()
     BoolTy => ()
+    ArrayTy(constraint) =>
+      if constraint.validate(value.as_array().unwrap()).not() {
+        valid = false
+      }
     NumberTy(constraint) =>
       if constraint.validate(value.as_number().unwrap()).not() {
+        valid = false
+      }
+    ObjectTy(constraint) =>
+      if constraint.validate(value.as_object().unwrap()).not() {
         valid = false
       }
     StringTy(constraint) =>

@@ -5,13 +5,13 @@ pub struct Schema {
   constraint : ValueConstraint?
   typed_constraint : TypedSchemaConstraint
   content : Map[String, @json.JsonValue]
-}
+} derive(Show)
 
 pub struct SchemaControl {
   if_ : Schema
   then : Schema?
   else_ : Schema?
-}
+} derive(Show)
 
 pub fn SchemaControl::new() -> SchemaControl {
   { if_: Schema::new("null"), then: None, else_: None }
@@ -20,7 +20,7 @@ pub fn SchemaControl::new() -> SchemaControl {
 pub struct ValueConstraint {
   const : @json.JsonValue?
   enum_ : Array[@json.JsonValue]?
-}
+} derive(Show)
 
 pub fn ValueConstraint::new() -> ValueConstraint {
   { const: None, enum_: None }
@@ -33,14 +33,14 @@ pub enum TypedSchemaConstraint {
   NumberTy(NumberConstraint)
   ObjectTy(ObjectConstraint)
   StringTy(StringConstraint)
-}
+} derive(Show)
 
 struct ArrayConstraint {
   items : (Schema?, Array[Schema]?)
   minItems : Int
   maxItems : Int?
   uniqueItems : Bool
-}
+} derive(Show)
 
 pub fn ArrayConstraint::new() -> ArrayConstraint {
   { items: (None, None), minItems: 0, maxItems: None, uniqueItems: false }
@@ -51,7 +51,7 @@ struct NumberConstraint {
   exclusiveMinimum : Double?
   maximum : Double?
   exclusiveMaximum : Double?
-}
+} derive(Show)
 
 pub fn NumberConstraint::new() -> NumberConstraint {
   {
@@ -65,7 +65,7 @@ pub fn NumberConstraint::new() -> NumberConstraint {
 enum StringArrayOrSchema {
   StringArray(Array[String])
   Schema(Schema)
-}
+} derive(Show)
 
 struct ObjectConstraint {
   properties : Properties
@@ -77,7 +77,7 @@ struct ObjectConstraint {
   propertyNames : Schema?
   minProperties : Int
   maxProperties : Int?
-}
+} derive(Show)
 
 pub fn ObjectConstraint::new() -> ObjectConstraint {
   {
@@ -98,15 +98,15 @@ struct StringConstraint {
   pattern : String?
   minLength : Int
   maxLength : Int?
-}
+} derive(Show)
 
 pub fn StringConstraint::new() -> StringConstraint {
   { format: None, pattern: None, minLength: 0, maxLength: None }
 }
 
-pub type Definition Schema
+pub type Definition Schema derive(Show)
 
-pub type Property Schema
+pub type Property Schema derive(Show)
 
 pub typealias Properties = Map[String, Property]
 

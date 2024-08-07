@@ -71,7 +71,8 @@ fn parse_schema_value_constraint(
 ) -> Schema!ParseError {
   let constraint = {
     const: check1!("const", medium.type_name, object),
-    enum_: check1!("enum", "array", object).map_or(@json.Null, fn(val) { val }).as_array(),
+    enum_: check1!("enum", "array", object)
+      .map(fn(val) { val.as_array().unwrap() })
   }
   { ..medium, constraint: Some(constraint) }
 }
@@ -150,9 +151,12 @@ fn parse_object_schema(
         let obj = val.as_object().unwrap()
         let keys = obj.keys().collect()
         let props : Map[String, Property] = {  }
-        for key = keys[0], i = 0; i < keys.length(); key = keys[i], i = i + 1 {
+        for i = 0; i < keys.length(); i = i + 1 {
+          let key = keys[i]
           match parse?(obj[key].unwrap()) {
-            Ok(schema) => props[key] = schema
+            Ok(schema) => {
+              props[key] = schema
+            }
             Err(e) => {
               result = Err(e)
               break
@@ -190,7 +194,8 @@ fn parse_object_schema(
         let obj = val.as_object().unwrap()
         let keys = obj.keys().collect()
         let props : Map[String, Property] = {  }
-        for key = keys[0], i = 0; i < keys.length(); key = keys[i], i = i + 1 {
+        for i = 0; i < keys.length(); i = i + 1 {
+          let key = keys[i]
           match parse?(obj[key].unwrap()) {
             Ok(schema) => props[key] = schema
             Err(e) => {
@@ -217,7 +222,8 @@ fn parse_object_schema(
         let obj = val.as_object().unwrap()
         let deps: Map[String, StringArrayOrSchema] = {}
         let keys = obj.keys().collect()
-        for key = keys[0], i = 0; i < keys.length(); i = i + 1, key = keys[i] {
+        for i = 0; i < keys.length(); i = i + 1 {
+          let key = keys[i]
           let maybe_e = checkn?(key, ["object", "array"], obj)
             .map_err(fn(e) { result = Err(e) });
 
