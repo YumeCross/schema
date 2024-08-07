@@ -1,3 +1,18 @@
+/// Checks if a specified member in a object has a specific type.
+/// 
+/// # Parameters
+/// 
+/// - `member` : The name of the member.
+/// - `specified_ty` : The expected type name of the member.
+/// - `map` : The data of the Json object.
+/// 
+/// # Returns
+/// 
+/// - Optional value if the member matches the type or doesn't exist.
+/// 
+/// # Errors
+/// 
+/// - `ParseError` : If the member exists but does not match the specified type, a `ParseError` is returned with details about the mismatch.
 fn check1(
   member : String,
   specified_ty : String,
@@ -281,6 +296,19 @@ fn parse_string_schema(
   { ..medium, typed_constraint: StringTy(constraint) }
 }
 
+/// Parses a Json object to create dchema.
+/// 
+/// # Parameters
+/// 
+/// - `object` : A Json object representing the schema to be parsed.
+/// 
+/// # Returns
+/// 
+/// A `Schema` instance if the parsing is successful.
+/// 
+/// # Errors
+/// 
+/// - `ParseError` : If the Json value is not an valid schema. 
 pub fn parse(object : @json.JsonValue) -> Schema!ParseError {
   // TODO: Complete
   match object.as_object() {

@@ -1,8 +1,18 @@
 test "validate_number" {
-  @test.eq!(
-    @lib.parse!({ "type": "number", "maximum": 42.0 }).validate(12),
-    true,
-  )
+  let schema = @lib.parse!({
+    "$id": "example",
+    "type": "object",
+    "properties": {
+        "limited_number": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 42
+        }
+    }
+  })
+
+  @test.eq!(schema.validate({ "limited_number": 23 }), true)
+  @test.eq!(schema.validate({ "limited_number": 43 }), false)
 }
 
 test "validate_object" {

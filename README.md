@@ -5,24 +5,20 @@ Schema library provides APIs to parse Schema and to validate Json by parsed Sche
 ## Examples
 
 ```moonbit
-let schema = @lib.parse!({
+let schema = @schema.parse!({
     "$id": "example",
     "type": "object",
     "properties": {
         "limited_number": {
-            "type": "integer",
+            "type": "number",
             "minimum": 0,
             "maximum": 42
         }
     }
 })
-@test.eq!(@lib.validate(schema, {
-    "limited_number": 23
-}), true) // Validation passed
 
-@test.eq!(@lib.validate(schema, {
-    "limited_number": 233
-}), false) // Validation failed
+println(schema.validate({ "limited_number": 23 })) // output: true
+println(schema.validate({ "limited_number": 42.1 })) // output: false
 ```
 
 > [!note]

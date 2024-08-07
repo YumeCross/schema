@@ -1,5 +1,10 @@
-/// Returns the type name of a Json value as a String.
+/// # Parameters
 /// 
+/// - `value` : A Json value.
+/// 
+/// # Returns
+/// 
+/// The type name of a Json value as a String.
 /// Possible return values are "array", "boolean", "null", "number", "object", and "string".
 fn type_name(value : @json.JsonValue) -> String {
   match value {
@@ -47,10 +52,10 @@ pub fn validate(self : ArrayConstraint, value: Array[@json.JsonValue]) -> Bool {
 
 pub fn validate(self : NumberConstraint, value : Double) -> Bool {
   let mut valid = true
-  self.maximum.map(fn(max) { valid = value <= max }) |> ignore
-  self.minimum.map(fn(min) { valid = value >= min }) |> ignore
-  self.exclusiveMaximum.map(fn(e_max) { valid = value < e_max }) |> ignore
-  self.exclusiveMinimum.map(fn(e_min) { valid = value > e_min }) |> ignore
+  self.maximum.map(fn(max) { if not(value <= max) { valid = false } }) |> ignore
+  self.minimum.map(fn(min) { if not(value >= min) { valid = false} }) |> ignore
+  self.exclusiveMaximum.map(fn(e_max) { if not(value < e_max) { valid = false } }) |> ignore
+  self.exclusiveMinimum.map(fn(e_min) { if not(value > e_min) { valid = false } }) |> ignore
   valid
 }
 
@@ -99,6 +104,16 @@ pub fn validate(self : ObjectConstraint, value : Map[String, @json.JsonValue]) -
   valid
 }
 
+/// Validates whether a given Json value conforms to the schema definition.
+/// 
+/// # Parameters
+/// 
+/// - `self` : The schema.
+/// - `value` : The value to be validated.
+/// 
+/// # Returns
+/// 
+/// - `Bool` : `true` if the Json value conforms to the schema, otherwise `false`.
 pub fn validate(self : Schema, value : @json.JsonValue) -> Bool {
   if self.type_name != type_name(value) {
     return false
