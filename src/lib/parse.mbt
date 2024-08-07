@@ -264,11 +264,11 @@ fn parse_string_schema(
     pattern: check1!("pattern", "string", object).map(
       fn(v) { v.as_string().unwrap() },
     ),
-    minLength: check1!("minLength", "string", object).map_or(
+    minLength: check1!("minLength", "number", object).map_or(
       0,
       fn(v) { v.as_number().unwrap().to_int() },
     ),
-    maxLength: check1!("maxLength", "string", object).map(
+    maxLength: check1!("maxLength", "number", object).map(
       fn(v) { v.as_number().unwrap().to_int() },
     ),
   }
