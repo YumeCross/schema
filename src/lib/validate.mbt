@@ -1,80 +1,69 @@
-/// # Parameters
-/// 
-/// - `value` : A Json value.
-/// 
-/// # Returns
-/// 
-/// The type name of a Json value as a String.
-/// Possible return values are "array", "boolean", "null", "number", "object", and "string".
-fn type_name(value : Json) -> String {
-  match value {
-    Array(_) => "array"
-    True | False => "boolean"
-    Null => "null"
-    Number(_) => "number"
-    Object(_) => "object"
-    String(_) => "string"
-  }
-}
-
-test "type_name" {
-  inspect!(type_name(Array([])), content="array")
-  inspect!(type_name(True), content="boolean")
-  inspect!(type_name(Null), content="null")
-  inspect!(type_name(Number(42.0)), content="number")
-  inspect!(type_name(Object({  })), content="object")
-  inspect!(type_name(String("test")), content="string")
-}
+// TODO: Add refined validation support
+// That is, validate function signal will be `(Self, Json) -> ValidationStatus`
+// instead of simple bool values.
 
 pub fn validate(self : ValueConstraint, value : Json) -> Bool {
   let mut valid = true
-  self.const.map(fn(const) { valid = value == const }) |> ignore
-  self.enum_.map(
-    fn(arr) {
-      valid = false
-      arr.each(fn(val) { if value == val { valid = true } })
-    },
-  )
-  |> ignore
+  match self.const {
+    Some(const) => if value != const { return false; }
+    None => ()
+  }
+  match self.enum_ {
+    Some(arr) => arr.each(fn(val) { if value == val { valid = true } })
+    None => ()
+  }
   valid
 }
 
 pub fn validate(self : ArrayConstraint, value : Array[Json]) -> Bool {
   let mut valid = true
   valid = self.minItems <= value.length()
-  self.maxItems.map(fn(max) { valid = max >= value.length() }) |> ignore
-  // TODO
+  match self.maxItems { 
+    Some(max) => if max <= value.length() { return false; }
+    None => ()
+  }
+  // TODO: uniqueItems support
   match self.items {
-    Some(items) => {
+    Some(items) =>
       match items {
-        Schema(schema) => {
-          value.each(fn(val) { if schema.validate(val).not() { valid = false } })
-        }
-        SchemaArray(arr) => {
-          arr.eachi(fn(i, schema) {
-            if schema.validate(value[i]).not() { valid = false }
-          })
-        }
+        Schema(schema) =>
+          value.each(
+            fn(val) { if schema.validate(val).not() { valid = false } },
+          )
+        SchemaArray(arr) =>
+          arr.eachi(
+            fn(i, schema) {
+              if schema.validate(value[i]).not() {
+                valid = false
+              }
+            },
+          )
       }
-    }
     None => ()
   }
   valid
 }
 
 pub fn validate(self : NumberConstraint, value : Double) -> Bool {
-  let mut valid = true
-  self.maximum.map(fn(max) { if not(value <= max) { valid = false } }) |> ignore
-  self.minimum.map(fn(min) { if not(value >= min) { valid = false } }) |> ignore
-  self.exclusiveMaximum.map(
-    fn(e_max) { if not(value < e_max) { valid = false } },
-  )
-  |> ignore
-  self.exclusiveMinimum.map(
-    fn(e_min) { if not(value > e_min) { valid = false } },
-  )
-  |> ignore
-  valid
+  match self.maximum {
+    Some(max) => if not(value <= max) { return false }
+    None => ()
+  }
+
+  match self.minimum {
+    Some(min) => if not(value >= min) { return false }
+    None => ()
+  }
+
+  match self.exclusiveMaximum { 
+    Some(e_max) => if not(value < e_max) { return false }
+    None => ()
+  }
+  match self.exclusiveMinimum {
+    Some(e_min) => if not(value > e_min) { return false }
+    None => ()
+  }
+  true
 }
 
 pub fn validate(self : StringConstraint, value : String) -> Bool {
@@ -84,20 +73,16 @@ pub fn validate(self : StringConstraint, value : String) -> Bool {
   if valid.not() {
     return false
   }
-  self.format.map(
-    fn(format) {
-      // TODO: Check format after regex is support
-      valid = true
-    },
-  )
-  |> ignore
-  self.pattern.map(
-    fn(pattern) {
-      // TODO: Check pattern after regex is support
-      valid = true
-    },
-  )
-  |> ignore
+  match self.format {
+    // TODO: Check format after regex is support
+    Some(_format) => ()
+    None => ()
+  }
+  match self.pattern {
+    // TODO: Check pattern after regex is support
+    Some(_pattern) => ()
+    None => ()
+  }
   valid
 }
 
@@ -126,16 +111,18 @@ pub fn validate(self : ObjectConstraint, value : Map[String, Json]) -> Bool {
     }
     valid = self.properties[key].unwrap().0.validate(val.unwrap())
   }
-  // TODO: Complete
   match self.additionalProperties {
     Bool(true) => ()
+    // TODO: Check whether it limits properties from $ref.
     Bool(false) => if keys.length() > propKeys.length() { valid = false }
-    Schema(schema) => ()
+    // TODO: Complete
+    Schema(_schema) => ()
   }
   if (self.required
-  .map_option(fn(key) { if keys.contains(key) { Some(key) } else { None } })
-  .length() == self.required.length()).not() {
-    valid = false
+    .map_option(fn(key) { if keys.contains(key) { Some(key) } else { None } })
+    .length() ==
+    self.required.length()).not() {
+    return false
   }
   valid
 }

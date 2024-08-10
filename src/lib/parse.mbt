@@ -52,10 +52,10 @@ fn checkn(
     fn(value) {
       let ty_name = type_name(value)
       let mut invalid = true
-      specified_tys.each(fn(ty) { if ty == ty_name { invalid = false } })
-      let msg = specified_tys
-        ..mapi_inplace(
-          fn(i, s) {
+      for ty in specified_tys { if ty == ty_name { invalid = false } }
+      if invalid {
+        let msg = specified_tys
+          ..mapi_inplace(fn(i, s) {
             if i == specified_tys.length() - 2 {
               s + " or " + specified_tys[i + 1]
             } else if i == specified_tys.length() - 1 {
@@ -66,7 +66,6 @@ fn checkn(
           },
         )
         .join("")
-      if invalid {
         result = Err(
           ParseError::make_member_type_error(
             member,
@@ -110,26 +109,24 @@ fn parse_array_schema(
 ) -> Schema!ParseError {
   let constraint = {
     items: match checkn!("items", ["array", "object"], object) {
-      Some(v) => {
+      Some(v) =>
         match v {
           Array(arr) => {
-            let mut maybe_e: Result[Unit, ParseError] = Ok(())
+            let mut maybe_e : Result[Unit, ParseError] = Ok(())
             let v = Some(
-              SchemaArray(
-                arr.map_option(fn(obj) {
-                  parse?(obj).map_err(fn(e) { maybe_e = Err(e) }).to_option()
-                })
-              )
+              SchemaArray(arr.map_option(
+                  fn(obj) {
+                    parse?(obj).map_err(fn(e) { maybe_e = Err(e) }).to_option()
+                  },
+                ),
+              ),
             )
             maybe_e.unwrap_or_error!()
             v
           }
-          Object(obj) => {
-            Some(SchemaOrSchemaArray::Schema(parse!(Object(obj))))
-          }
+          Object(obj) => Some(SchemaOrSchemaArray::Schema(parse!(Object(obj))))
           _ => panic()
         }
-      }
       None => None
     },
     minItems: check1!("minItems", "number", object).map_or(
@@ -181,24 +178,17 @@ fn parse_object_schema(
     maxProperties: check1!("maxProperties", "number", map).map(
       fn(val) { val.as_number().unwrap().to_int() },
     ),
-    required: check1!("required", "array", map).map_or(
-      [],
-      fn(val) {
-        val
-        .as_array()
-        .unwrap()
-        .map_option(
+    required: (match check1!("required", "array", map) {
+      None => []
+      Some(val) =>
+        val.as_array().unwrap().map_option(
           fn(item) {
-            item
-            .as_string()
-            .map_or_else(
+            item.as_string().map_or_else(
               fn() {
                 let ty_name = type_name(item)
                 result = Err(
-                  ParseError(
-                    InvalidItemType(
-                      "Expect a item of type string in 'required', got \{ty_name}",
-                    ),
+                  InvalidItemType(
+                    "Expect a item of type string in 'required', got \{ty_name}",
                   ),
                 )
                 None
@@ -207,27 +197,18 @@ fn parse_object_schema(
             )
           },
         )
-      },
-    ),
-    properties: check1!("properties", "object", map).map_or(
-      {  },
-      fn(val) {
+    }),
+    properties: match check1!("properties", "object", map) {
+      None => {  }
+      Some(val) => {
         let obj = val.as_object().unwrap()
-        let keys = obj.keys().collect()
         let props : Map[String, Property] = {  }
-        for i = 0; i < keys.length(); i = i + 1 {
-          let key = keys[i]
-          match parse?(obj[key].unwrap()) {
-            Ok(schema) => props[key] = schema
-            Err(e) => {
-              result = Err(e)
-              break
-            }
-          }
+        for key, val in obj {
+          props[key] =  parse!(val)
         }
         props
-      },
-    ),
+      }
+  },
     // TODO
     definitions: None,
     additionalProperties: checkn!(
@@ -272,9 +253,7 @@ fn parse_object_schema(
         let obj = val.as_object().unwrap()
         if obj.get_or_init("type", fn() { "string" }) != "string" {
           result = Err(
-            ParseError(
-              InvalidSchema("Invalid 'type' string in 'propertyNames'"),
-            ),
+            InvalidSchema("Invalid 'type' string in 'propertyNames'"),
           )
         }
         parse?(val).map_err(fn(e) { result = Err(e) }).to_option()
@@ -293,27 +272,21 @@ fn parse_object_schema(
           if result.is_err() {
             return {  }
           }
-          maybe_e
-          .to_option()
-          .map(
+          maybe_e.to_option().map(
             fn(val) {
               match val.unwrap() {
                 Array(arr) =>
                   deps[key] = StringArray(
                     arr.map_option(
                       fn(item) {
-                        if result.is_err() {
-                          return None
-                        }
+                        if result.is_err() { return None }
                         match item.as_string() {
                           Some(s) => Some(s)
                           None => {
                             let ty_name = type_name(item)
                             result = Err(
-                              ParseError(
-                                InvalidItemType(
-                                  "Expect a item of type string in 'required', got \{ty_name}",
-                                ),
+                              InvalidItemType(
+                                "Expect a item of type string in 'required', got \{ty_name}",
                               ),
                             )
                             None
@@ -382,7 +355,7 @@ pub fn parse(object : Json) -> Schema!ParseError {
     Some(_) => ()
     None => {
       let ty_name = type_name(object)
-      raise ParseError(InvalidSchema("Expect a Json object, got \{ty_name}"))
+      raise InvalidSchema("Expect a Json object, got \{ty_name}")
     }
   }
   let map = object.as_object().unwrap()
@@ -397,16 +370,13 @@ pub fn parse(object : Json) -> Schema!ParseError {
       schema = parse_string_schema!(Schema::new("string"), map)
     { "type": "object" } =>
       schema = parse_object_schema!(Schema::new("object"), map)
-    { "type"?: None, "const": const } =>
-      {
-        map["type"] = String(type_name(const))
-        return parse!(Object(map))
-      }
+    { "type"? : None, "const": const } => {
+      map["type"] = String(type_name(const))
+      return parse!(Object(map))
+    }
     _ =>
-      raise ParseError(
-        InvalidSchema(
-          "Invalid member 'type', should be one of 'array', 'boolean', 'null', 'number', 'object', 'string'",
-        ),
+      raise InvalidSchema(
+        "Invalid member 'type', should be one of 'array', 'boolean', 'null', 'number', 'object', 'string'",
       )
   }
   schema = parse_schema_value_constraint!(schema, map)

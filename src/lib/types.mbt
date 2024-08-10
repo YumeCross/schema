@@ -1,4 +1,5 @@
 pub struct Schema {
+  // TODO: Add multiple types support.
   type_name : String
   ref : String?
   control : SchemaControl?
@@ -7,6 +8,7 @@ pub struct Schema {
   content : Map[String, Json]
 } derive(Show)
 
+// TODO: Add support
 pub struct SchemaControl {
   if_ : Schema
   then : Schema?
@@ -122,24 +124,22 @@ pub typealias Properties = Map[String, Property]
 
 pub typealias Definitions = Map[String, Definition]
 
-enum ErrorData {
+pub type! ParseError {
   InvalidJson(@json.ParseError)
   InvalidSchema(String)
   InvalidMemberType(String, String, String)
   InvalidItemType(String)
 } derive(Eq)
 
-pub type! ParseError ErrorData derive(Eq)
-
 fn ParseError::make_member_type_error(
   member : String,
   specified_ty : String,
   ty : String
 ) -> ParseError {
-  ParseError(InvalidMemberType(member, specified_ty, ty))
+  InvalidMemberType(member, specified_ty, ty)
 }
 
-pub fn to_string(self : ErrorData) -> String {
+pub fn to_string(self : ParseError) -> String {
   match self {
     InvalidItemType(s) => s
     InvalidJson(e) => e.to_string()
@@ -149,16 +149,34 @@ pub fn to_string(self : ErrorData) -> String {
   }
 }
 
-pub impl Show for ErrorData with output(self, logger) {
+pub impl Show for ParseError with output(self, logger) {
   logger.write_string(self.to_string())
 }
 
-pub fn ParseError::to_string(self : ParseError) -> String {
-  match self {
-    ParseError(e) => e.to_string()
+/// # Parameters
+/// 
+/// - `value` : A Json value.
+/// 
+/// # Returns
+/// 
+/// The type name of a Json value as a String.
+/// Possible return values are "array", "boolean", "null", "number", "object", and "string".
+fn type_name(value : Json) -> String {
+  match value {
+    Array(_) => "array"
+    True | False => "boolean"
+    Null => "null"
+    Number(_) => "number"
+    Object(_) => "object"
+    String(_) => "string"
   }
 }
 
-pub impl Show for ParseError with output(self, logger) {
-  logger.write_string(self.to_string())
+test "type_name" {
+  inspect!(type_name(Array([])), content="array")
+  inspect!(type_name(True), content="boolean")
+  inspect!(type_name(Null), content="null")
+  inspect!(type_name(Number(42.0)), content="number")
+  inspect!(type_name(Object({  })), content="object")
+  inspect!(type_name(String("test")), content="string")
 }
