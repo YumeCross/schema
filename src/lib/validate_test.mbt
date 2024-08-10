@@ -11,7 +11,7 @@ test "validate_array" {
   let sch2 = @lib.parse!(
     {
       "type": "array",
-      "items": [{ "type": "number", "const": 1 }, { "type": "number" }, { "type": "number" }]
+      "items": [{"const": 1 }, { "type": "number" }, { "type": "number" }]
     }
   )
   @test.eq!(sch2.validate([1, 2, 3]), true)

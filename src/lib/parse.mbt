@@ -397,6 +397,11 @@ pub fn parse(object : Json) -> Schema!ParseError {
       schema = parse_string_schema!(Schema::new("string"), map)
     { "type": "object" } =>
       schema = parse_object_schema!(Schema::new("object"), map)
+    { "type"?: None, "const": const } =>
+      {
+        map["type"] = String(type_name(const))
+        return parse!(Object(map))
+      }
     _ =>
       raise ParseError(
         InvalidSchema(
