@@ -4,7 +4,7 @@ pub struct Schema {
   control : SchemaControl?
   constraint : ValueConstraint?
   typed_constraint : TypedSchemaConstraint
-  content : Map[String, @json.JsonValue]
+  content : Map[String, Json]
 } derive(Show)
 
 pub struct SchemaControl {
@@ -18,8 +18,8 @@ pub fn SchemaControl::new() -> SchemaControl {
 }
 
 pub struct ValueConstraint {
-  const : @json.JsonValue?
-  enum_ : Array[@json.JsonValue]?
+  const : Json?
+  enum_ : Array[Json]?
 } derive(Show)
 
 pub fn ValueConstraint::new() -> ValueConstraint {
@@ -35,15 +35,20 @@ pub enum TypedSchemaConstraint {
   StringTy(StringConstraint)
 } derive(Show)
 
+enum SchemaOrSchemaArray {
+  Schema(Schema)
+  SchemaArray(Array[Schema])
+} derive(Show)
+
 struct ArrayConstraint {
-  items : (Schema?, Array[Schema]?)
+  items : SchemaOrSchemaArray?
   minItems : Int
   maxItems : Int?
   uniqueItems : Bool
 } derive(Show)
 
 pub fn ArrayConstraint::new() -> ArrayConstraint {
-  { items: (None, None), minItems: 0, maxItems: None, uniqueItems: false }
+  { items: None, minItems: 0, maxItems: None, uniqueItems: false }
 }
 
 struct NumberConstraint {
@@ -67,11 +72,16 @@ enum StringArrayOrSchema {
   Schema(Schema)
 } derive(Show)
 
+enum BoolOrSchema {
+  Bool(Bool)
+  Schema(Schema)
+} derive(Show)
+
 struct ObjectConstraint {
   properties : Properties
   definitions : Definitions?
   required : Array[String]
-  additionalProperties : (Bool, Schema?)
+  additionalProperties : BoolOrSchema
   patternProperties : Properties?
   dependencies : Map[String, StringArrayOrSchema]?
   propertyNames : Schema?
@@ -84,7 +94,7 @@ pub fn ObjectConstraint::new() -> ObjectConstraint {
     properties: {  },
     definitions: None,
     required: [],
-    additionalProperties: (true, None),
+    additionalProperties: Bool(true),
     patternProperties: None,
     dependencies: None,
     propertyNames: None,

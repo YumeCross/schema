@@ -28,6 +28,17 @@ pub fn Schema::new(type_name : String) -> Schema {
   }
 }
 
+fn Schema::empty() -> Schema {
+  {
+    type_name: "",
+    ref: None,
+    control: None,
+    constraint: None,
+    typed_constraint: NullTy,
+    content: {},
+  }
+}
+
 /// Return the '$id' property from the schema Json.
 /// 
 /// @alert unsafe "Panic if not exist"

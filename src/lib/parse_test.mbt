@@ -16,16 +16,16 @@ test "parse_object_schema" {
       "type": "object",
       "properties": {
         "a": { "type": "number", "const": 42 },
-        "b": { "type": "string", "enum": ["test1", "test2"] }
-      }
-    }
+        "b": { "type": "string", "enum": ["test1", "test2"] },
+      },
+    },
   )
   |> ignore
 }
 
 test "parse_string_schema" {
   @lib.parse!(
-    { "type": "string", "minLength": 2, "maxLength": 12, "format": "url" }
+    { "type": "string", "minLength": 2, "maxLength": 12, "format": "url" },
   )
   |> ignore
 }
