@@ -52,20 +52,26 @@ fn checkn(
     fn(value) {
       let ty_name = type_name(value)
       let mut invalid = true
-      for ty in specified_tys { if ty == ty_name { invalid = false } }
+      for ty in specified_tys {
+        if ty == ty_name {
+          invalid = false
+        }
+      }
       if invalid {
-        let msg = String::concat(specified_tys
-          ..mapi_inplace(fn(i, s) {
-            if i == specified_tys.length() - 2 {
-              s + " or " + specified_tys[i + 1]
-            } else if i == specified_tys.length() - 1 {
-              ""
-            } else {
-              s + ", "
-            }
-          },
-        ), separator="")
-        
+        let msg = String::concat(
+          specified_tys..mapi_inplace(
+            fn(i, s) {
+              if i == specified_tys.length() - 2 {
+                s + " or " + specified_tys[i + 1]
+              } else if i == specified_tys.length() - 1 {
+                ""
+              } else {
+                s + ", "
+              }
+            },
+          ),
+          separator="",
+        )
         result = Err(
           ParseError::make_member_type_error(
             member,
@@ -114,7 +120,8 @@ fn parse_array_schema(
           Array(arr) => {
             let mut maybe_e : Result[Unit, ParseError] = Ok(())
             let v = Some(
-              SchemaArray(arr.map_option(
+              SchemaArray(
+                arr.map_option(
                   fn(obj) {
                     parse?(obj).map_err(fn(e) { maybe_e = Err(e) }).to_option()
                   },
@@ -178,12 +185,17 @@ fn parse_object_schema(
     maxProperties: check1!("maxProperties", "number", map).map(
       fn(val) { val.as_number().unwrap().to_int() },
     ),
-    required: (match check1!("required", "array", map) {
+    required: match check1!("required", "array", map) {
       None => []
       Some(val) =>
-        val.as_array().unwrap().map_option(
+        val
+        .as_array()
+        .unwrap()
+        .map_option(
           fn(item) {
-            item.as_string().map_or_else(
+            item
+            .as_string()
+            .map_or_else(
               fn() {
                 let ty_name = type_name(item)
                 result = Err(
@@ -197,18 +209,18 @@ fn parse_object_schema(
             )
           },
         )
-    }),
+    },
     properties: match check1!("properties", "object", map) {
-      None => {  }
+      None => {}
       Some(val) => {
         let obj = val.as_object().unwrap()
-        let props : Map[String, Property] = {  }
+        let props : Map[String, Property] = {}
         for key, val in obj {
-          props[key] =  parse!(val)
+          props[key] = parse!(val)
         }
         props
       }
-  },
+    },
     // TODO
     definitions: None,
     additionalProperties: checkn!(
@@ -233,7 +245,7 @@ fn parse_object_schema(
       fn(val) {
         let obj = val.as_object().unwrap()
         let keys = obj.keys().collect()
-        let props : Map[String, Property] = {  }
+        let props : Map[String, Property] = {}
         for i = 0; i < keys.length(); i = i + 1 {
           let key = keys[i]
           match parse?(obj[key].unwrap()) {
@@ -262,7 +274,7 @@ fn parse_object_schema(
     dependencies: check1!("dependencies", "object", map).map(
       fn(val) {
         let obj = val.as_object().unwrap()
-        let deps : Map[String, StringArrayOrSchema] = {  }
+        let deps : Map[String, StringArrayOrSchema] = {}
         let keys = obj.keys().collect()
         for i = 0; i < keys.length(); i = i + 1 {
           let key = keys[i]
@@ -270,16 +282,20 @@ fn parse_object_schema(
             fn(e) { result = Err(e) },
           )
           if result.is_err() {
-            return {  }
+            return {}
           }
-          maybe_e.to_option().map(
+          maybe_e
+          .to_option()
+          .map(
             fn(val) {
               match val.unwrap() {
                 Array(arr) =>
                   deps[key] = StringArray(
                     arr.map_option(
                       fn(item) {
-                        if result.is_err() { return None }
+                        if result.is_err() {
+                          return None
+                        }
                         match item.as_string() {
                           Some(s) => Some(s)
                           None => {

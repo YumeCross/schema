@@ -12,7 +12,7 @@ pub fn Schema::new(type_name : String) -> Schema {
     control: None,
     constraint: None,
     typed_constraint: NullTy,
-    content: {  },
+    content: {},
   }
   match type_name {
     "array" => { ..medium, typed_constraint: ArrayTy(ArrayConstraint::new()) }

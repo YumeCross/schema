@@ -5,7 +5,7 @@
 pub fn validate(self : ValueConstraint, value : Json) -> Bool {
   let mut valid = true
   match self.const {
-    Some(const) => if value != const { return false; }
+    Some(const) => if value != const { return false }
     None => ()
   }
   match self.enum_ {
@@ -18,7 +18,7 @@ pub fn validate(self : ValueConstraint, value : Json) -> Bool {
 pub fn validate(self : ArrayConstraint, value : Array[Json]) -> Bool {
   let mut valid = true
   valid = self.minItems <= value.length()
-  match self.maxItems { 
+  match self.maxItems {
     Some(max) => if max < value.length() { return false }
     None => ()
   }
@@ -49,13 +49,11 @@ pub fn validate(self : NumberConstraint, value : Double) -> Bool {
     Some(max) => if not(value <= max) { return false }
     None => ()
   }
-
   match self.minimum {
     Some(min) => if not(value >= min) { return false }
     None => ()
   }
-
-  match self.exclusiveMaximum { 
+  match self.exclusiveMaximum {
     Some(e_max) => if not(value < e_max) { return false }
     None => ()
   }
@@ -169,7 +167,7 @@ pub fn validate(self : Schema, value : Json) -> Bool {
   valid
 }
 
-pub fn validate(self: Property, value: Json) -> Bool {
+pub fn validate(self : Property, value : Json) -> Bool {
   // TODO: Complete
   self._.validate(value)
 }

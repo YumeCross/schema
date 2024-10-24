@@ -93,7 +93,7 @@ struct ObjectConstraint {
 
 pub fn ObjectConstraint::new() -> ObjectConstraint {
   {
-    properties: {  },
+    properties: {},
     definitions: None,
     required: [],
     additionalProperties: Bool(true),
@@ -140,6 +140,7 @@ fn ParseError::make_member_type_error(
 }
 
 pub fn to_string(self : ParseError) -> String {
+  // TODO: Improve error messages.
   match self {
     InvalidItemType(s) => s
     InvalidJson(e) => e.to_string()
@@ -177,6 +178,6 @@ test "type_name" {
   inspect!(type_name(True), content="boolean")
   inspect!(type_name(Null), content="null")
   inspect!(type_name(Number(42.0)), content="number")
-  inspect!(type_name(Object({  })), content="object")
+  inspect!(type_name(Object({})), content="object")
   inspect!(type_name(String("test")), content="string")
 }
