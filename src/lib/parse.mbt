@@ -54,7 +54,7 @@ fn checkn(
       let mut invalid = true
       for ty in specified_tys { if ty == ty_name { invalid = false } }
       if invalid {
-        let msg = specified_tys
+        let msg = String::concat(specified_tys
           ..mapi_inplace(fn(i, s) {
             if i == specified_tys.length() - 2 {
               s + " or " + specified_tys[i + 1]
@@ -64,8 +64,8 @@ fn checkn(
               s + ", "
             }
           },
-        )
-        .join("")
+        ), separator="")
+        
         result = Err(
           ParseError::make_member_type_error(
             member,

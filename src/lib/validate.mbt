@@ -19,7 +19,7 @@ pub fn validate(self : ArrayConstraint, value : Array[Json]) -> Bool {
   let mut valid = true
   valid = self.minItems <= value.length()
   match self.maxItems { 
-    Some(max) => if max <= value.length() { return false; }
+    Some(max) => if max < value.length() { return false }
     None => ()
   }
   // TODO: uniqueItems support
@@ -109,7 +109,7 @@ pub fn validate(self : ObjectConstraint, value : Map[String, Json]) -> Bool {
     if valid.not() {
       return false
     }
-    valid = self.properties[key].unwrap().0.validate(val.unwrap())
+    valid = self.properties[key].unwrap().validate(val.unwrap())
   }
   match self.additionalProperties {
     Bool(true) => ()
@@ -167,4 +167,9 @@ pub fn validate(self : Schema, value : Json) -> Bool {
       }
   }
   valid
+}
+
+pub fn validate(self: Property, value: Json) -> Bool {
+  // TODO: Complete
+  self._.validate(value)
 }

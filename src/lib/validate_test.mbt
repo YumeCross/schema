@@ -1,18 +1,18 @@
 test "validate_array" {
   let sch1 = @lib.parse!({ "type": "array", "minItems": 2, "maxItems": 3 })
-  @test.eq!(sch1.validate([1, 2]), true)
-  @test.eq!(sch1.validate([1, 2, 3, 4, 5]), false)
+  assert_eq!(sch1.validate([1, 2]), true)
+  assert_eq!(sch1.validate([1, 2, 3, 4, 5]), false)
   let sch2 = @lib.parse!(
     {
       "type": "array",
       "items": [{ "const": 1 }, { "type": "number" }, { "type": "number" }],
     },
   )
-  @test.eq!(sch2.validate([1, 2, 3]), true)
-  @test.eq!(sch2.validate([2, 1, 2]), false)
+  assert_eq!(sch2.validate([1, 2, 3]), true)
+  assert_eq!(sch2.validate([2, 1, 2]), false)
   let sch3 = @lib.parse!({ "type": "array", "items": [{ "type": "string" }] })
-  @test.eq!(sch3.validate(["test"]), true)
-  @test.eq!(sch3.validate([2, 1]), false)
+  assert_eq!(sch3.validate(["test"]), true)
+  assert_eq!(sch3.validate([2, 1]), false)
 }
 
 test "validate_number" {
@@ -25,8 +25,8 @@ test "validate_number" {
       },
     },
   )
-  @test.eq!(schema.validate({ "limited_number": 23 }), true)
-  @test.eq!(schema.validate({ "limited_number": 43 }), false)
+  assert_eq!(schema.validate({ "limited_number": 23 }), true)
+  assert_eq!(schema.validate({ "limited_number": 43 }), false)
 }
 
 test "validate_object" {
@@ -39,8 +39,8 @@ test "validate_object" {
       },
     },
   )
-  @test.eq!(sch1.validate({ "a": 42, "b": "hello" }), true)
-  @test.eq!(sch1.validate({ "a": 42, "b": "what" }), false)
+  assert_eq!(sch1.validate({ "a": 42, "b": "hello" }), true)
+  assert_eq!(sch1.validate({ "a": 42, "b": "what" }), false)
   let sch2 = @lib.parse!(
     {
       "type": "object",
@@ -49,12 +49,12 @@ test "validate_object" {
       },
     },
   )
-  @test.eq!(sch2.validate({ "test": "test-1" }), true)
-  @test.eq!(sch2.validate({ "test": "variant-2" }), true)
+  assert_eq!(sch2.validate({ "test": "test-1" }), true)
+  assert_eq!(sch2.validate({ "test": "variant-2" }), true)
 }
 
 test "validate_string" {
   let sch = @lib.parse!({ "type": "string", "minLength": 5, "maxLength": 12 })
-  @test.eq!(sch.validate(233), false)
-  @test.eq!(sch.validate("Hello World"), true)
+  assert_eq!(sch.validate(233), false)
+  assert_eq!(sch.validate("Hello World"), true)
 }
