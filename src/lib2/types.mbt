@@ -47,7 +47,8 @@ pub enum KeywordData {
   MaxProperties(Int)
 
   // The array-specific keywords
-  Items(Either[Schema, Array[Schema]])
+  Items(Schema)
+  PrefixItems(Array[Schema])
   AdditionalItems(Either[Bool, Schema])
   MinItems(Int)
   MaxItems(Int)

@@ -20,6 +20,24 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
   }
   match json {
     True | False | Null => Ok(())
+    Array(arr) => for _, def in self.keywords {
+        match def.validate_array(arr) {
+          Ok(_) => ()
+          Err(err) =>
+            return Err(
+              ValidateError(
+                {
+                  ..err,
+                  stack: ["<array>", ..(if err.stack.is_empty() { [def.name] } else { err.stack })],
+                  expected: def,
+                  received: Some(json),
+                },
+              ),
+            )
+        }
+      } else {
+        Ok(())
+      }
     Number(num) =>
       for _, def in self.keywords {
         match def.validate_number(num) {
@@ -132,6 +150,69 @@ fn validate_generic(self : Schema, json : Json) -> Result[Unit, ErrorData] {
         _ => panic()
       }
     None => Ok(())
+  }
+}
+
+fn validate_array(self : Keyword, arr : Array[Json]) -> Result[Unit, ErrorData] {
+  match self.data {
+    MinItems(min) => quick_fail_if_not(min <= arr.length())
+    MaxItems(max) => quick_fail_if_not(max >= arr.length())
+    UniqueItems(unique) => if unique {
+        let len = arr.length()
+        arr.dedup()
+        if len > arr.length() {
+            Err(
+            // TODO: Implement position reporting
+            { stack: [], expected: self, received: None },
+          )
+        } else {
+          Ok(())
+        }
+      } else {
+        Ok(())
+      }
+    PrefixItems(schemas) => for i, schema in schemas {
+      match arr.get(i) {
+        Some(item) => match schema.validate(item) {
+          Ok(_) => ()
+          Err(err) =>
+            return Err(
+              {
+                ..err._,
+                stack: [i.to_string(), ..err.stack],
+                expected: self,
+                received: Some(item),
+              },
+            )
+        }
+        None => return Err(
+          {
+            stack: [i.to_string()],
+            expected: self,
+            received: None,
+          },
+        )
+      }
+    } else {
+      Ok(())
+    }
+    Items(schema) => for i, item in arr {
+      match schema.validate(item) {
+        Ok(_) => ()
+        Err(err) =>
+          return Err(
+            {
+              ..err._,
+              stack: [i.to_string(), ..err.stack],
+              expected: self,
+              received: Some(item),
+            },
+          )
+      }
+    } else {
+      Ok(())
+    }
+    _ => panic()
   }
 }
 
@@ -268,16 +349,15 @@ fn validate_object(
         if obj.contains(key) {
           match schema.validate(Object(obj)) {
             Ok(_) => ()
-            Err(err) => {
+            Err(err) =>
               return Err(
                 {
                   ..err._,
-                  stack: [key, "<-dependentSchemas->", ..err._.stack],
+                  stack: [key, "-<:dependentSchemas>-", ..err._.stack],
                   expected: self,
                   received: Some(Object(obj)),
                 },
               )
-            }
           }
         }
       } else {

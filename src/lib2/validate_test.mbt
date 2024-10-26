@@ -1,4 +1,4 @@
-test "validate string" {
+test "validate enum/const" {
   let s1 : @lib2.Schema = {
     typ: Left("string"),
     keywords: { "enum": { data: @lib2.Enum(["1", "2", "3"]), name: "enum" } },
@@ -7,13 +7,22 @@ test "validate string" {
   assert_false!(s1.validate(String("test")).is_ok())
   let s2 : @lib2.Schema = {
     typ: Left("string"),
+    keywords: { "const": { data: @lib2.Const("test"), name: "const" } },
+  }
+  assert_true!(s2.validate(String("test")).is_ok())
+  assert_false!(s2.validate(String("1")).is_ok())
+}
+
+test "validate string" {
+  let s1 : @lib2.Schema = {
+    typ: Left("string"),
     keywords: {
       "minLength": { data: @lib2.MinLength(1), name: "minLength" },
       "maxLength": { data: @lib2.MaxLength(3), name: "maxLength" },
     },
   }
-  assert_true!(s2.validate(String("123")).is_ok())
-  assert_false!(s2.validate(String("1234")).is_ok())
+  assert_true!(s1.validate(String("123")).is_ok())
+  assert_false!(s1.validate(String("1234")).is_ok())
 }
 
 test "validate object" {
@@ -143,7 +152,11 @@ test "validate object dependencies" {
     s2.validate({ "name": String("John"), "age": 30 }.to_json()).is_ok(),
   )
   assert_true!(
-    s2.validate({ "name": String("John"), "age": 30, "identity": "00123" }.to_json()).is_ok()
+    s2
+    .validate(
+      { "name": String("John"), "age": 30, "identity": "00123" }.to_json(),
+    )
+    .is_ok(),
   )
   assert_false!(
     s2.validate({ "name": false, "age": 30, "identity": "12300" }).is_ok(),
