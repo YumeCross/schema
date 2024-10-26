@@ -20,15 +20,23 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
   }
   match json {
     True | False | Null => Ok(())
-    Array(arr) => for _, def in self.keywords {
-        match def.validate_array(arr) {
+    Array(arr) =>
+      for _, def in self.keywords {
+        match def.validate_array(arr, parent=Ref::new(self)) {
           Ok(_) => ()
           Err(err) =>
             return Err(
               ValidateError(
                 {
                   ..err,
-                  stack: ["<array>", ..(if err.stack.is_empty() { [def.name] } else { err.stack })],
+                  stack: [
+                    "<array>",
+                    ..if err.stack.is_empty() {
+                      [def.name]
+                    } else {
+                      err.stack
+                    },
+                  ],
                   expected: def,
                   received: Some(json),
                 },
@@ -153,15 +161,20 @@ fn validate_generic(self : Schema, json : Json) -> Result[Unit, ErrorData] {
   }
 }
 
-fn validate_array(self : Keyword, arr : Array[Json]) -> Result[Unit, ErrorData] {
+fn validate_array(
+  self : Keyword,
+  arr : Array[Json],
+  ~parent : Ref[Schema]
+) -> Result[Unit, ErrorData] {
   match self.data {
     MinItems(min) => quick_fail_if_not(min <= arr.length())
     MaxItems(max) => quick_fail_if_not(max >= arr.length())
-    UniqueItems(unique) => if unique {
+    UniqueItems(unique) =>
+      if unique {
         let len = arr.length()
         arr.dedup()
         if len > arr.length() {
-            Err(
+          Err(
             // TODO: Implement position reporting
             { stack: [], expected: self, received: None },
           )
@@ -171,9 +184,42 @@ fn validate_array(self : Keyword, arr : Array[Json]) -> Result[Unit, ErrorData] 
       } else {
         Ok(())
       }
-    PrefixItems(schemas) => for i, schema in schemas {
-      match arr.get(i) {
-        Some(item) => match schema.validate(item) {
+    PrefixItems(schemas) =>
+      for i, schema in schemas {
+        match arr.get(i) {
+          Some(item) =>
+            match schema.validate(item) {
+              Ok(_) => ()
+              Err(err) =>
+                return Err(
+                  {
+                    ..err._,
+                    stack: [i.to_string(), ..err.stack],
+                    expected: self,
+                    received: Some(item),
+                  },
+                )
+            }
+          None =>
+            return Err(
+              { stack: [i.to_string()], expected: self, received: None },
+            )
+        }
+      } else {
+        Ok(())
+      }
+    Items(schema) => {
+      let start = parent.val.keywords["prefixItems"].map_or(
+        arr.length(),
+        fn(keyword) {
+          match keyword.data {
+            PrefixItems(schemas) => schemas.length()
+            _ => panic()
+          }
+        },
+      )
+      for i, item in arr[start:] {
+        match schema.validate(item) {
           Ok(_) => ()
           Err(err) =>
             return Err(
@@ -185,32 +231,9 @@ fn validate_array(self : Keyword, arr : Array[Json]) -> Result[Unit, ErrorData] 
               },
             )
         }
-        None => return Err(
-          {
-            stack: [i.to_string()],
-            expected: self,
-            received: None,
-          },
-        )
+      } else {
+        Ok(())
       }
-    } else {
-      Ok(())
-    }
-    Items(schema) => for i, item in arr {
-      match schema.validate(item) {
-        Ok(_) => ()
-        Err(err) =>
-          return Err(
-            {
-              ..err._,
-              stack: [i.to_string(), ..err.stack],
-              expected: self,
-              received: Some(item),
-            },
-          )
-      }
-    } else {
-      Ok(())
     }
     _ => panic()
   }
