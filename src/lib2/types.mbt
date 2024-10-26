@@ -49,6 +49,8 @@ pub enum KeywordData {
   // The array-specific keywords
   Items(Schema)
   PrefixItems(Array[Schema])
+  // TODO: Taken place of by `Items` after draft 2020-12, how to handle?
+ /// @alert deprecated "Use `Items` instead"
   AdditionalItems(Either[Bool, Schema])
   MinItems(Int)
   MaxItems(Int)

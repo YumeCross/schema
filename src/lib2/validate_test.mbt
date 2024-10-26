@@ -13,6 +13,38 @@ test "validate enum/const" {
   assert_false!(s2.validate(String("1")).is_ok())
 }
 
+test "validate array" {
+  let s1 : @lib2.Schema = {
+    typ: Left("array"),
+    keywords: {
+      "items": {
+        name: "items",
+        data: Items(
+          {
+            typ: Left("string"),
+            keywords: {
+              "enum": { data: @lib2.Enum(["1", "2", "3", "4"]), name: "enum" },
+            },
+          },
+        ),
+      },
+      "prefixItems": {
+        name: "prefixItems",
+        data: PrefixItems(
+          [
+            { typ: Left("number"), keywords: {} },
+            { typ: Left("number"), keywords: {} },
+          ],
+        ),
+      },
+    },
+  }
+  assert_true!(s1.validate([2, 4]).is_ok())
+  assert_true!(s1.validate([1, 2, "4"]).is_ok())
+  assert_false!(s1.validate(["1", "2", "3"]).is_ok())
+  assert_false!(s1.validate([1, 2, 3, "4"]).is_ok())
+}
+
 test "validate string" {
   let s1 : @lib2.Schema = {
     typ: Left("string"),
