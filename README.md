@@ -2,6 +2,14 @@
 
 Schema library provides APIs to parse Schema and to validate Json by parsed Schema.
 
+## Usages
+
+What is JSON Schema?
+
+[> JSON Schema is the vocabulary that enables JSON data consistency, validity, and interoperability at scale.](https://json-schema.org/)
+
+### Parse
+
 ## Examples
 
 ```moonbit
