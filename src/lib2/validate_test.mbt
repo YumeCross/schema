@@ -58,7 +58,9 @@ test "validate object additionalProperties" {
               keywords: {
                 "properties": {
                   name: "properties",
-                  data: Properties({ "test": { typ: Left("string"), keywords: {} } },),
+                  data: Properties(
+                    { "test": { typ: Left("string"), keywords: {} } },
+                  ),
                 },
               },
             },
@@ -67,9 +69,83 @@ test "validate object additionalProperties" {
       },
     },
   }
-  println(
-    s1.validate(
+  assert_true!(
+    s1
+    .validate(
       { "name": String("John"), "age": 30, "address": { "test": "eee" } }.to_json(),
-    ),
+    )
+    .is_ok(),
+  )
+}
+
+test "validate object dependencies" {
+  let s1 : @lib2.Schema = {
+    typ: Left("object"),
+    keywords: {
+      "properties": {
+        name: "properties",
+        data: Properties(
+          {
+            "name": { typ: Left("string"), keywords: {} },
+            "age": { typ: Left("number"), keywords: {} },
+            "identity": { typ: Left("string"), keywords: {} },
+          },
+        ),
+      },
+      "dependentRequired": {
+        name: "dependentRequired",
+        data: DependentRequired({ "name": ["identity"] }),
+      },
+    },
+  }
+  assert_true!(s1.validate({ "age": 30 }.to_json()).is_ok())
+  assert_true!(
+    s1
+    .validate({ "name": String("John"), "age": 30, "identity": "123" })
+    .is_ok(),
+  )
+  assert_false!(
+    s1.validate({ "name": String("John"), "age": 30 }.to_json()).is_ok(),
+  )
+  let s2 : @lib2.Schema = {
+    typ: Left("object"),
+    keywords: {
+      "properties": {
+        name: "properties",
+        data: Properties(
+          {
+            "name": { typ: Left("string"), keywords: {} },
+            "age": { typ: Left("number"), keywords: {} },
+          },
+        ),
+      },
+      "dependentSchemas": {
+        name: "dependentSchemas",
+        data: DependentSchemas(
+          {
+            "name": {
+              typ: Left("object"),
+              keywords: {
+                "properties": {
+                  name: "properties",
+                  data: Properties(
+                    { "identity": { typ: Left("string"), keywords: {} } },
+                  ),
+                },
+              },
+            },
+          },
+        ),
+      },
+    },
+  }
+  assert_true!(
+    s2.validate({ "name": String("John"), "age": 30 }.to_json()).is_ok(),
+  )
+  assert_true!(
+    s2.validate({ "name": String("John"), "age": 30, "identity": "00123" }.to_json()).is_ok()
+  )
+  assert_false!(
+    s2.validate({ "name": false, "age": 30, "identity": "12300" }).is_ok(),
   )
 }

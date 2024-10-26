@@ -1,43 +1,25 @@
-fn validate_type(
-  either : Either[String, Array[String]],
-  json : Json
-) -> String? {
-  match
-    (match either {
-      Left("number") => json.as_number().is_empty().not()
-      Left("string") => json.as_string().is_empty().not()
-      Left("object") => json.as_object().is_empty().not()
-      Left("array") => json.as_array().is_empty().not()
-      Left("boolean") => json.as_bool().is_empty().not()
-      Left("null") => json.as_null().is_empty().not()
-      Left(_) => panic()
-      Right(_) => false // TODO: implement type checking for mutiple types
-    }) {
-    true => None
-    false =>
-      match either {
-        Left(typ) => Some(typ)
-        Right(types) => Some(String::concat(types, separator=" / "))
-      }
-  }
-}
-
 pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
-  let stack : Array[String] = []
-  match validate_type(self.typ, json) {
-    Some(typ) =>
-      return Err(
-        ValidateError(
-          {
-            stack: ["<\{typ}>"],
-            expected: { name: "type", data: Type(self.typ) },
-            received: Some(json),
-          },
-        ),
-      )
-    None => ()
+  if self.typ.left() != Some("") {
+    match validate_type(self.typ, json) {
+      Some(typ) =>
+        return Err(
+          ValidateError(
+            {
+              stack: ["<\{typ}>"],
+              expected: { name: "type", data: Type(self.typ) },
+              received: Some(json),
+            },
+          ),
+        )
+      None => ()
+    }
+  }
+  match self.validate_generic(json) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
   }
   match json {
+    True | False | Null => Ok(())
     Number(num) =>
       for _, def in self.keywords {
         match def.validate_number(num) {
@@ -98,6 +80,61 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
   }
 }
 
+fn validate_type(
+  either : Either[String, Array[String]],
+  json : Json
+) -> String? {
+  match
+    (match either {
+      Left("number") => json.as_number().is_empty().not()
+      Left("string") => json.as_string().is_empty().not()
+      Left("object") => json.as_object().is_empty().not()
+      Left("array") => json.as_array().is_empty().not()
+      Left("boolean") => json.as_bool().is_empty().not()
+      Left("null") => json.as_null().is_empty().not()
+      Left(_) => panic()
+      Right(_) => false // TODO: implement type checking for mutiple types
+    }) {
+    true => None
+    false =>
+      match either {
+        Left(typ) => Some(typ)
+        Right(types) => Some(String::concat(types, separator=" / "))
+      }
+  }
+}
+
+fn validate_generic(self : Schema, json : Json) -> Result[Unit, ErrorData] {
+  match self.keywords["enum"] {
+    Some(def) =>
+      match def.data {
+        Enum(values) =>
+          if values.contains(json).not() {
+            return Err(
+              { stack: ["<:enum>"], expected: def, received: Some(json) },
+            )
+          }
+        _ => panic()
+      }
+    None => ()
+  }
+  match self.keywords["const"] {
+    Some(def) =>
+      match def.data {
+        Const(value) =>
+          if json != value {
+            return Err(
+              { stack: ["<:const>"], expected: def, received: Some(json) },
+            )
+          } else {
+            Ok(())
+          }
+        _ => panic()
+      }
+    None => Ok(())
+  }
+}
+
 fn validate_number(self : Keyword, num : Double) -> Result[Unit, ErrorData] {
   match self.data {
     Minimum(min) => quick_fail_if_not(num >= min)
@@ -126,6 +163,10 @@ fn validate_object(
   ~parent : Schema
 ) -> Result[Unit, ErrorData] {
   match self.data {
+    MinProperties(min) =>
+      quick_fail_if_not(min <= obj.keys().collect().length())
+    MaxProperties(max) =>
+      quick_fail_if_not(max >= obj.keys().collect().length())
     Properties(props) =>
       for key, prop in props {
         match obj[key] {
@@ -149,9 +190,7 @@ fn validate_object(
     Required(keys) =>
       for _, key in keys {
         if obj.contains(key).not() {
-          return Err(
-            { stack: ["<object>", key], expected: self, received: None },
-          )
+          return Err({ stack: [key], expected: self, received: None })
         }
       } else {
         Ok(())
@@ -199,5 +238,51 @@ fn validate_object(
         },
       )
     }
+    DependentRequired(deps) =>
+      for key, dependents in deps {
+        if obj.contains(key) {
+          let mut dep : String? = None
+          for dependent in dependents {
+            if obj.contains(dependent).not() {
+              dep = Some(dependent)
+              break
+            }
+          }
+          match dep {
+            Some(dep) =>
+              return Err(
+                {
+                  stack: ["<object>", key, "-<:dependentRequired>-", dep],
+                  expected: self,
+                  received: None,
+                },
+              )
+            None => ()
+          }
+        }
+      } else {
+        Ok(())
+      }
+    DependentSchemas(deps) =>
+      for key, schema in deps {
+        if obj.contains(key) {
+          match schema.validate(Object(obj)) {
+            Ok(_) => ()
+            Err(err) => {
+              return Err(
+                {
+                  ..err._,
+                  stack: [key, "<-dependentSchemas->", ..err._.stack],
+                  expected: self,
+                  received: Some(Object(obj)),
+                },
+              )
+            }
+          }
+        }
+      } else {
+        Ok(())
+      }
+    _ => panic()
   }
 }
