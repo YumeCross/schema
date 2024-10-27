@@ -43,6 +43,43 @@ test "validate array" {
   assert_true!(s1.validate([1, 2, "4"]).is_ok())
   assert_false!(s1.validate(["1", "2", "3"]).is_ok())
   assert_false!(s1.validate([1, 2, 3, "4"]).is_ok())
+  let s2 : @lib2.Schema = {
+    typ: Left("array"),
+    keywords: {
+      "items": {
+        name: "items",
+        data: Items({ typ: Left("string"), keywords: {} }),
+      },
+      "minItems": { data: @lib2.MinItems(2), name: "minItems" },
+      "maxItems": { data: @lib2.MaxItems(5), name: "maxItems" },
+    },
+  }
+  assert_true!(s2.validate(["1", "2"]).is_ok())
+  assert_false!(s2.validate([]).is_ok())
+  assert_false!(s2.validate(["1", "3", "5", "7", "9", "11"]).is_ok())
+}
+
+test "validate array contains" {
+  let s1 : @lib2.Schema = {
+    typ: Left("array"),
+    keywords: {
+      "contains": {
+        name: "contains",
+        data: Contains({ typ: Left("number"), keywords: {} }),
+      },
+      "minContains": {
+        name: "minContains",
+        data: MinContains(2),
+      },
+      "maxContains": {
+        name: "maxContains",
+        data: MaxContains(3),
+      }
+    }
+  }
+  assert_true!(s1.validate([1, 2, 3]).is_ok())
+  assert_true!(s1.validate([1, 2, "3"]).is_ok())
+  assert_false!(s1.validate([1, "2"]).is_ok())
 }
 
 test "validate string" {

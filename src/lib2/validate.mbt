@@ -22,7 +22,7 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
     True | False | Null => Ok(())
     Array(arr) =>
       for _, def in self.keywords {
-        match def.validate_array(arr, parent=Ref::new(self)) {
+        match def.validate_array(arr, parent=self) {
           Ok(_) => ()
           Err(err) =>
             return Err(
@@ -32,7 +32,7 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
                   stack: [
                     "<array>",
                     ..if err.stack.is_empty() {
-                      [def.name]
+                      ["<:\{def.name}>"]
                     } else {
                       err.stack
                     },
@@ -55,7 +55,7 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
               ValidateError(
                 {
                   ..err,
-                  stack: ["<number>", def.name],
+                  stack: ["<number>", "<:\{def.name}>"],
                   expected: def,
                   received: Some(json),
                 },
@@ -74,7 +74,7 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
               ValidateError(
                 {
                   ..err,
-                  stack: ["<string>", def.name],
+                  stack: ["<string>", "<:\{def.name}>"],
                   expected: def,
                   received: Some(json),
                 },
@@ -164,7 +164,7 @@ fn validate_generic(self : Schema, json : Json) -> Result[Unit, ErrorData] {
 fn validate_array(
   self : Keyword,
   arr : Array[Json],
-  ~parent : Ref[Schema]
+  ~parent : Schema
 ) -> Result[Unit, ErrorData] {
   match self.data {
     MinItems(min) => quick_fail_if_not(min <= arr.length())
@@ -209,7 +209,7 @@ fn validate_array(
         Ok(())
       }
     Items(schema) => {
-      let start = parent.val.keywords["prefixItems"].map_or(
+      let start = parent.keywords["prefixItems"].map_or(
         arr.length(),
         fn(keyword) {
           match keyword.data {
@@ -235,6 +235,59 @@ fn validate_array(
         Ok(())
       }
     }
+    Contains(schema) => {
+      let min = parent.keywords["minContains"].map_or(
+        None,
+        fn(def) {
+          match def.data {
+            MinContains(min) => Some(min)
+            _ => None
+          }
+        },
+      )
+      let max = parent.keywords["maxContains"].map_or(
+        None,
+        fn(def) {
+          match def.data {
+            MaxContains(max) => Some(max)
+            _ => None
+          }
+        },
+      )
+      let mut match_count = 0
+      for _, item in arr {
+        if schema.validate(item).is_ok() {
+          match_count += 1
+        }
+      }
+      if min.is_empty() && match_count == 0 {
+        return Err({ stack: ["<:contains>"], expected: self, received: None })
+      } else {
+        let min = min.unwrap()
+        if min > match_count {
+          Err(
+            {
+              stack: ["<:minContains=\{min}>"],
+              expected: self,
+              received: Some(Number(match_count.to_double())),
+            },
+          )
+        } else if max.is_empty() && match_count <= max.unwrap() {
+          Err(
+            {
+              stack: ["<:maxContains=\{max}>"],
+              expected: self,
+              received: Some(Number(match_count.to_double())),
+            },
+          )
+        } else {
+          Ok(())
+        }
+      }
+    }
+    MinContains(_) | MaxContains(_) => Ok(())
+    // TODO: Implement UnevaluatedItems
+    UnevaluatedItems(_schema) => ...
     _ => panic()
   }
 }
@@ -388,4 +441,9 @@ fn validate_object(
       }
     _ => panic()
   }
+}
+
+fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
+  
+  Ok(())
 }

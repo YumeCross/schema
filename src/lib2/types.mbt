@@ -49,11 +49,16 @@ pub enum KeywordData {
   // The array-specific keywords
   Items(Schema)
   PrefixItems(Array[Schema])
+  UnevaluatedItems(Schema)
   // TODO: Taken place of by `Items` after draft 2020-12, how to handle?
- /// @alert deprecated "Use `Items` instead"
+  /// @alert deprecated "Use `Items` instead"
   AdditionalItems(Either[Bool, Schema])
   MinItems(Int)
   MaxItems(Int)
+  Contains(Schema)
+  /// Specify how many times a schema matches a contains constraint. 
+  MinContains(Int)
+  MaxContains(Int)
   UniqueItems(Bool)
 
   // The compositional keywords
