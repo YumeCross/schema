@@ -18,6 +18,7 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
+
   match json {
     True | False | Null => Ok(())
     Array(arr) =>
@@ -443,7 +444,93 @@ fn validate_object(
   }
 }
 
-fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
-  
+fn validate_composition(self : Schema, json : Json) -> Result[Unit, ErrorData] {
+  match self.keywords["allOf"] {
+    Some(def) => match def.validate_composition(json) {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    None => ()
+  }
+  match self.keywords["anyOf"] {
+    Some(def) => match def.validate_composition(json) {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    None => ()
+  }
+  match self.keywords["oneOf"] {
+    Some(def) => match def.validate_composition(json) {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    None => ()
+  }
+  match self.keywords["not"] {
+    Some(def) => match def.validate_composition(json) {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    None => ()
+  }
   Ok(())
+}
+
+fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
+  match self.data {
+    AllOf(schemas) =>
+      for schema in schemas {
+        match schema.validate(json) {
+          Ok(_) => ()
+          Err(err) =>
+            return Err(
+              {
+                ..err._,
+                stack: ["<:allOf>"],
+                expected: self,
+                received: Some(json),
+              },
+            )
+        }
+      } else {
+        Ok(())
+      }
+    AnyOf(schemas) => {
+      for schema in schemas {
+        match schema.validate(json) {
+          Ok(_) => return Ok(()) // short-circuit
+          Err(_) => ()
+        }
+      }
+      return Err({ stack: ["<:anyOf>"], expected: self, received: Some(json) })
+    }
+    OneOf(schemas) => {
+      let mut matched = false
+      for schema in schemas {
+        match schema.validate(json) {
+          Ok(_) =>
+            if matched.not() {
+              matched = true
+            } else {
+              return Err(
+                { stack: ["<:oneOf>"], expected: self, received: Some(json) },
+              )
+            }
+          Err(_) => ()
+        }
+      }
+      if matched.not() {
+        return Err(
+          { stack: ["<:oneOf>"], expected: self, received: Some(json) },
+        )
+      } else {
+        Ok(())
+      }
+    }
+    Not(schema) => match schema.validate(json) {
+      Ok(_) => Err({ stack: ["<:not>"], expected: self, received: Some(json) })
+      Err(_) => Ok(())
+    }
+    _ => panic()
+  }
 }

@@ -67,15 +67,9 @@ test "validate array contains" {
         name: "contains",
         data: Contains({ typ: Left("number"), keywords: {} }),
       },
-      "minContains": {
-        name: "minContains",
-        data: MinContains(2),
-      },
-      "maxContains": {
-        name: "maxContains",
-        data: MaxContains(3),
-      }
-    }
+      "minContains": { name: "minContains", data: MinContains(2) },
+      "maxContains": { name: "maxContains", data: MaxContains(3) },
+    },
   }
   assert_true!(s1.validate([1, 2, 3]).is_ok())
   assert_true!(s1.validate([1, 2, "3"]).is_ok())
