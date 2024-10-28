@@ -14,7 +14,13 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
       None => ()
     }
   }
+
   match self.validate_generic(json) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  
+  match self.validate_condition(json) {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
@@ -446,31 +452,35 @@ fn validate_object(
 
 fn validate_composition(self : Schema, json : Json) -> Result[Unit, ErrorData] {
   match self.keywords["allOf"] {
-    Some(def) => match def.validate_composition(json) {
-      Ok(_) => ()
-      Err(err) => return Err(err)
-    }
+    Some(def) =>
+      match def.validate_composition(json) {
+        Ok(_) => ()
+        Err(err) => return Err(err)
+      }
     None => ()
   }
   match self.keywords["anyOf"] {
-    Some(def) => match def.validate_composition(json) {
-      Ok(_) => ()
-      Err(err) => return Err(err)
-    }
+    Some(def) =>
+      match def.validate_composition(json) {
+        Ok(_) => ()
+        Err(err) => return Err(err)
+      }
     None => ()
   }
   match self.keywords["oneOf"] {
-    Some(def) => match def.validate_composition(json) {
-      Ok(_) => ()
-      Err(err) => return Err(err)
-    }
+    Some(def) =>
+      match def.validate_composition(json) {
+        Ok(_) => ()
+        Err(err) => return Err(err)
+      }
     None => ()
   }
   match self.keywords["not"] {
-    Some(def) => match def.validate_composition(json) {
-      Ok(_) => ()
-      Err(err) => return Err(err)
-    }
+    Some(def) =>
+      match def.validate_composition(json) {
+        Ok(_) => ()
+        Err(err) => return Err(err)
+      }
     None => ()
   }
   Ok(())
@@ -527,10 +537,73 @@ fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] 
         Ok(())
       }
     }
-    Not(schema) => match schema.validate(json) {
-      Ok(_) => Err({ stack: ["<:not>"], expected: self, received: Some(json) })
-      Err(_) => Ok(())
-    }
+    Not(schema) =>
+      match schema.validate(json) {
+        Ok(_) =>
+          Err({ stack: ["<:not>"], expected: self, received: Some(json) })
+        Err(_) => Ok(())
+      }
     _ => panic()
+  }
+}
+
+fn validate_condition(self : Schema, json : Json) -> Result[Unit, ErrorData] {
+  let mut matched : Bool? = None
+  match self.keywords["if"] {
+    Some(def) =>
+      match def.data {
+        If(schema) =>
+          match schema.validate(json) {
+            Ok(_) => matched = Some(true)
+            Err(_) => matched = Some(false)
+          }
+        _ => panic()
+      }
+    None => ()
+  }
+  match matched {
+    Some(true) =>
+      match self.keywords["then"] {
+        Some(def) =>
+          match def.data {
+            Then(schema) =>
+              match schema.validate(json) {
+                Ok(_) => Ok(())
+                Err(err) =>
+                  return Err(
+                    {
+                      ..err._,
+                      stack: ["<:then>", ..err._.stack],
+                      expected: def,
+                      received: Some(json),
+                    },
+                  )
+              }
+            _ => panic()
+          }
+        None => Ok(())
+      }
+    Some(false) =>
+      match self.keywords["else"] {
+        Some(def) =>
+          match def.data {
+            Else(schema) =>
+              match schema.validate(json) {
+                Ok(_) => Ok(())
+                Err(err) =>
+                  return Err(
+                    {
+                      ..err._,
+                      stack: ["<:else>", ..err._.stack],
+                      expected: def,
+                      received: Some(json),
+                    },
+                  )
+              }
+            _ => panic()
+          }
+        None => Ok(())
+      }
+    None => Ok(())
   }
 }

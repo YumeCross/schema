@@ -225,3 +225,35 @@ test "validate object dependencies" {
     s2.validate({ "name": false, "age": 30, "identity": "12300" }).is_ok(),
   )
 }
+
+test "validate composition" {
+  let s1 : @lib2.Schema = {
+    typ: Left(""),
+    keywords: {
+      "anyOf": {
+        name: "anyOf",
+        data: AnyOf(
+          [
+            {
+              typ: Left("boolean"),
+              keywords: {}
+            },
+            {
+              typ: Left("number"),
+              keywords: {
+                "minimum": { data: @lib2.Minimum(10), name: "minimum" }
+              }
+            }
+          ])
+      }
+    }
+  }
+
+  assert_true!(s1.validate(true).is_ok())
+  // TODO: Fix this test
+  assert_true!(s1.validate(15).is_ok())
+}
+
+test "validate condition" {
+
+}
