@@ -1,3 +1,17 @@
+fn assert_ok![T, E: Show](result: Result[T, E], ~loc : SourceLoc = _) -> Unit! {
+  match result {
+    Ok(_) => ()
+    Err(e) => fail!(e.to_string(), ~loc)
+  }
+}
+
+fn assert_err![T: Show, E: Show](result: Result[T, E], ~loc : SourceLoc = _) -> Unit! {
+  match result {
+    Err(_) => ()
+    Ok(_) => fail!("`result` is not an error", ~loc)
+  }
+}
+
 test "validate enum/const" {
   let s1 : @lib2.Schema = {
     typ: Left("string"),
@@ -249,9 +263,52 @@ test "validate composition" {
     }
   }
 
-  assert_true!(s1.validate(true).is_ok())
-  // TODO: Fix this test
-  assert_true!(s1.validate(15).is_ok())
+  assert_ok!(s1.validate(true))
+  assert_ok!(s1.validate(15))
+  assert_err!(s1.validate(5))
+
+  let s2 : @lib2.Schema = {
+    typ: Left(""),
+    keywords: {
+      "allOf": {
+        name: "allOf",
+        data: AllOf(
+          [
+            {
+              typ: Left("object"),
+              keywords: {
+                "properties": {
+                  name: "properties",
+                  data: Properties(
+                    {
+                      "name": { typ: Left("string"), keywords: {} },
+                      "age": { typ: Left("number"), keywords: {} },
+                    },
+                  ),
+                },
+              },
+            },
+            {
+              typ: Left(""),
+              keywords: {
+                "properties": {
+                  name: "properties",
+                  data: Properties(
+                    {
+                      "id": { typ: Left("string"), keywords: {} }
+                    },
+                  ),
+                },
+                "required": { name: "required", data: Required(["id"]) },
+              },
+            },
+          ])
+      }
+    }
+  }
+
+  assert_ok!(s2.validate({ "name": String("John"), "age": 30, "id": "123" }))
+  println(s2.validate({ "name": String("John"), "age": 30 }))
 }
 
 test "validate condition" {

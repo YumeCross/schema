@@ -19,6 +19,11 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
+
+  match self.validate_composition(json) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
   
   match self.validate_condition(json) {
     Ok(_) => ()
@@ -27,9 +32,9 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
 
   match json {
     True | False | Null => Ok(())
-    Array(arr) =>
+    Array(_arr) =>
       for _, def in self.keywords {
-        match def.validate_array(arr, parent=self) {
+        match def.validate_array(json, parent=self) {
           Ok(_) => ()
           Err(err) =>
             return Err(
@@ -53,9 +58,9 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
       } else {
         Ok(())
       }
-    Number(num) =>
+    Number(_num) =>
       for _, def in self.keywords {
-        match def.validate_number(num) {
+        match def.validate_number(json) {
           Ok(_) => ()
           Err(err) =>
             return Err(
@@ -72,9 +77,9 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
       } else {
         Ok(())
       }
-    String(str) =>
+    String(_str) =>
       for _, def in self.keywords {
-        match def.validate_string(str) {
+        match def.validate_string(json) {
           Ok(_) => ()
           Err(err) =>
             return Err(
@@ -91,9 +96,9 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
       } else {
         Ok(())
       }
-    Object(obj) =>
+    Object(_obj) =>
       for _, def in self.keywords {
-        match def.validate_object(obj, parent=self) {
+        match def.validate_object(json, parent=self) {
           Ok(_) => ()
           Err(err) =>
             return Err(
@@ -170,9 +175,12 @@ fn validate_generic(self : Schema, json : Json) -> Result[Unit, ErrorData] {
 
 fn validate_array(
   self : Keyword,
-  arr : Array[Json],
+  json : Json,
   ~parent : Schema
 ) -> Result[Unit, ErrorData] {
+  guard let Array(arr) = json else {
+    _ => return Ok(())
+  }
   match self.data {
     MinItems(min) => quick_fail_if_not(min <= arr.length())
     MaxItems(max) => quick_fail_if_not(max >= arr.length())
@@ -294,12 +302,15 @@ fn validate_array(
     }
     MinContains(_) | MaxContains(_) => Ok(())
     // TODO: Implement UnevaluatedItems
-    UnevaluatedItems(_schema) => ...
+    UnevaluatedItems(_schema) => panic()
     _ => panic()
   }
 }
 
-fn validate_number(self : Keyword, num : Double) -> Result[Unit, ErrorData] {
+fn validate_number(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
+  guard let Number(num) = json else {
+    _ => return Ok(())
+  }
   match self.data {
     Minimum(min) => quick_fail_if_not(num >= min)
     Maximum(max) => quick_fail_if_not(num <= max)
@@ -307,25 +318,31 @@ fn validate_number(self : Keyword, num : Double) -> Result[Unit, ErrorData] {
     ExclusiveMaximum(max) => quick_fail_if_not(num < max)
     MultipleOf(divisor) =>
       quick_fail_if_not(num.to_int() % divisor.to_int() == 0)
-    _ => panic()
+    _ => Ok(())
   }
 }
 
-fn validate_string(self : Keyword, str : String) -> Result[Unit, ErrorData] {
+fn validate_string(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
+  guard let String(str) = json else {
+    _ => return Ok(())
+  }
   match self.data {
     MinLength(min) => quick_fail_if_not(min <= str.length())
     MaxLength(max) => quick_fail_if_not(max >= str.length())
     Enum(values) => quick_fail_if_not(values.contains(String(str)))
     Const(value) => quick_fail_if(value != String(str))
-    _ => panic()
+    _ => Ok(())
   }
 }
 
 fn validate_object(
   self : Keyword,
-  obj : Map[String, Json],
+  json : Json,
   ~parent : Schema
 ) -> Result[Unit, ErrorData] {
+  guard let Object(obj) = json else {
+    _ => return Ok(())
+  }
   match self.data {
     MinProperties(min) =>
       quick_fail_if_not(min <= obj.keys().collect().length())
@@ -446,7 +463,7 @@ fn validate_object(
       } else {
         Ok(())
       }
-    _ => panic()
+    _ => Ok(())
   }
 }
 
@@ -496,7 +513,7 @@ fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] 
             return Err(
               {
                 ..err._,
-                stack: ["<:allOf>"],
+                stack: ["<:allOf>", ..err.stack],
                 expected: self,
                 received: Some(json),
               },
@@ -509,7 +526,7 @@ fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] 
       for schema in schemas {
         match schema.validate(json) {
           Ok(_) => return Ok(()) // short-circuit
-          Err(_) => ()
+          Err(_err) => ()
         }
       }
       return Err({ stack: ["<:anyOf>"], expected: self, received: Some(json) })

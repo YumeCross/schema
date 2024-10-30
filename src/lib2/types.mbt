@@ -84,4 +84,19 @@ struct ErrorData {
   received : Json?
 } derive(Show)
 
+
+pub type JsonPath Array[String] derive(Eq)
+
+pub impl Show for JsonPath with output(self, logger) {
+  logger.write_string(String::concat(self._, separator="/"))
+}
+
+// TODO: Reimplement
+// struct ValidationErrorData {
+//  instance_path: JsonPath
+//  schema_path: JsonPath
+//  keyword: Keyword
+//
+// } derive(Show)
+
 pub type ValidateError ErrorData derive(Show)
