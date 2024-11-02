@@ -14,22 +14,18 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
       None => ()
     }
   }
-
   match self.validate_generic(json) {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
-
   match self.validate_composition(json) {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
-  
   match self.validate_condition(json) {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
-
   match json {
     True | False | Null => Ok(())
     Array(_arr) =>
@@ -178,9 +174,7 @@ fn validate_array(
   json : Json,
   ~parent : Schema
 ) -> Result[Unit, ErrorData] {
-  guard let Array(arr) = json else {
-    _ => return Ok(())
-  }
+  guard let Array(arr) = json else { _ => return Ok(()) }
   match self.data {
     MinItems(min) => quick_fail_if_not(min <= arr.length())
     MaxItems(max) => quick_fail_if_not(max >= arr.length())
@@ -308,9 +302,7 @@ fn validate_array(
 }
 
 fn validate_number(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
-  guard let Number(num) = json else {
-    _ => return Ok(())
-  }
+  guard let Number(num) = json else { _ => return Ok(()) }
   match self.data {
     Minimum(min) => quick_fail_if_not(num >= min)
     Maximum(max) => quick_fail_if_not(num <= max)
@@ -323,9 +315,7 @@ fn validate_number(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
 }
 
 fn validate_string(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
-  guard let String(str) = json else {
-    _ => return Ok(())
-  }
+  guard let String(str) = json else { _ => return Ok(()) }
   match self.data {
     MinLength(min) => quick_fail_if_not(min <= str.length())
     MaxLength(max) => quick_fail_if_not(max >= str.length())
@@ -340,9 +330,7 @@ fn validate_object(
   json : Json,
   ~parent : Schema
 ) -> Result[Unit, ErrorData] {
-  guard let Object(obj) = json else {
-    _ => return Ok(())
-  }
+  guard let Object(obj) = json else { _ => return Ok(()) }
   match self.data {
     MinProperties(min) =>
       quick_fail_if_not(min <= obj.keys().collect().length())

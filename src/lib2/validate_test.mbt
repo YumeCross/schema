@@ -1,11 +1,17 @@
-fn assert_ok![T, E: Show](result: Result[T, E], ~loc : SourceLoc = _) -> Unit! {
+fn assert_ok![T, E : Show](
+  result : Result[T, E],
+  ~loc : SourceLoc = _
+) -> Unit! {
   match result {
     Ok(_) => ()
     Err(e) => fail!(e.to_string(), ~loc)
   }
 }
 
-fn assert_err![T: Show, E: Show](result: Result[T, E], ~loc : SourceLoc = _) -> Unit! {
+fn assert_err![T : Show, E : Show](
+  result : Result[T, E],
+  ~loc : SourceLoc = _
+) -> Unit! {
   match result {
     Err(_) => ()
     Ok(_) => fail!("`result` is not an error", ~loc)
@@ -248,25 +254,21 @@ test "validate composition" {
         name: "anyOf",
         data: AnyOf(
           [
-            {
-              typ: Left("boolean"),
-              keywords: {}
-            },
+            { typ: Left("boolean"), keywords: {} },
             {
               typ: Left("number"),
               keywords: {
-                "minimum": { data: @lib2.Minimum(10), name: "minimum" }
-              }
-            }
-          ])
-      }
-    }
+                "minimum": { data: @lib2.Minimum(10), name: "minimum" },
+              },
+            },
+          ],
+        ),
+      },
+    },
   }
-
   assert_ok!(s1.validate(true))
   assert_ok!(s1.validate(15))
   assert_err!(s1.validate(5))
-
   let s2 : @lib2.Schema = {
     typ: Left(""),
     keywords: {
@@ -294,21 +296,19 @@ test "validate composition" {
                 "properties": {
                   name: "properties",
                   data: Properties(
-                    {
-                      "id": { typ: Left("string"), keywords: {} }
-                    },
+                    { "id": { typ: Left("string"), keywords: {} } },
                   ),
                 },
                 "required": { name: "required", data: Required(["id"]) },
               },
             },
-          ])
-      }
-    }
+          ],
+        ),
+      },
+    },
   }
-
   assert_ok!(s2.validate({ "name": String("John"), "age": 30, "id": "123" }))
-  println(s2.validate({ "name": String("John"), "age": 30 }))
+  assert_err!(s2.validate({ "name": String("John"), "age": 30 }))
 }
 
 test "validate condition" {

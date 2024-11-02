@@ -1,17 +1,23 @@
 pub typealias Either[L, R] = @utils.Either[L, R]
 
 pub struct Schema {
-  typ : Either[String, Array[String]]
-  keywords : Map[String, Keyword]
-} derive(Show)
+  mut typ : Either[String, Array[String]]
+  mut keywords : Map[String, Keyword]
+} derive(Eq, Show)
 
 pub struct Keyword {
   /// The keyword name
   name : String
   data : KeywordData
-} derive(Show)
+} derive(Show, Eq)
 
 pub enum KeywordData {
+  // The structure
+  Schema(JsonPointer)
+  Id(JsonPointer)
+  Ref(JsonPointer)
+  Defs(Map[String, Schema])
+  Anchor(String)
   // The generic keywords
   // Title(String)
   // Description(String)
@@ -23,6 +29,7 @@ pub enum KeywordData {
   Type(Either[String, Array[String]])
   Enum(Array[Json])
   Const(Json)
+  Default(Json)
 
   // The string-specific keywords
   MinLength(Int)
@@ -71,10 +78,10 @@ pub enum KeywordData {
   If(Schema)
   Then(Schema)
   Else(Schema)
-} derive(Show)
+} derive(Eq, Show)
 
-pub type! ParseError {
-  InvalidSchema(String)
+pub type! SchemaParseError {
+  InvalidSchema
 } derive(Show)
 
 struct ErrorData {
@@ -84,10 +91,9 @@ struct ErrorData {
   received : Json?
 } derive(Show)
 
+pub type JsonPointer Array[String] derive(Eq)
 
-pub type JsonPath Array[String] derive(Eq)
-
-pub impl Show for JsonPath with output(self, logger) {
+pub impl Show for JsonPointer with output(self, logger) {
   logger.write_string(String::concat(self._, separator="/"))
 }
 
