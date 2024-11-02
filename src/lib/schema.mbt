@@ -1,57 +1,63 @@
-/// Creates new schema.
-/// 
-/// # Parameters
-/// 
-/// - `type_name` : A string representing the type of the schema. Valid values are "array", "boolean", "null", "number", "object", and "string".
-/// 
-/// @alert unsafe "Panic if invalid `type_name` is recevied."
-pub fn Schema::new(type_name : String) -> Schema {
-  let medium = {
-    type_name,
-    ref: None,
-    control: None,
-    constraint: None,
-    typed_constraint: NullTy,
-    content: {  },
+pub fn Keyword::new(data : KeywordData) -> Keyword {
+  match data {
+    //
+    Schema(_) => { name: "$schema", data }
+    Id(_) => { name: "$id", data }
+    Ref(_) => { name: "$ref", data }
+    Defs(_) => { name: "$defs", data }
+    Anchor(_) => { name: "$anchor", data }
+    //
+    Default(_) => { name: "default", data }
+    Enum(_) => { name: "enum", data }
+    Const(_) => { name: "const", data }
+    Type(_) => { name: "type", data }
+    //
+    AllOf(_) => { name: "allOf", data }
+    AnyOf(_) => { name: "anyOf", data }
+    OneOf(_) => { name: "oneOf", data }
+    //
+    Not(_) => { name: "not", data }
+    If(_) => { name: "if", data }
+    Then(_) => { name: "then", data }
+    Else(_) => { name: "else", data }
+    //
+    Required(_) => { name: "required", data }
+    MinProperties(_) => { name: "minProperties", data }
+    MaxProperties(_) => { name: "maxProperties", data }
+    DependentRequired(_) => { name: "dependentRequired", data }
+    DependentSchemas(_) => { name: "dependentSchemas", data }
+    Properties(_) => { name: "properties", data }
+    AdditionalProperties(_) => { name: "additionalProperties", data }
+    //
+    MinLength(_) => { name: "minLength", data }
+    MaxLength(_) => { name: "maxLength", data }
+    Pattern(_) => { name: "pattern", data }
+    Format(_) => { name: "format", data }
+    //
+    Items(_) => { name: "items", data }
+    AdditionalItems(_) => { name: "additionalItems", data }
+    UniqueItems(_) => { name: "uniqueItems", data }
+    Contains(_) => { name: "contains", data }
+    MinItems(_) => { name: "minItems", data }
+    MaxItems(_) => { name: "maxItems", data }
+    MinContains(_) => { name: "minContains", data }
+    MaxContains(_) => { name: "maxContains", data }
+    PrefixItems(_) => { name: "prefixItems", data }
+    UnevaluatedItems(_) => { name: "unevaluatedItems", data }
+    //
+    Minimum(_) => { name: "minimum", data }
+    ExclusiveMinimum(_) => { name: "exclusiveMinimum", data }
+    Maximum(_) => { name: "maximum", data }
+    ExclusiveMaximum(_) => { name: "exclusiveMaximum", data }
+    MultipleOf(_) => { name: "multipleOf", data }
   }
-  match type_name {
-    "array" => { ..medium, typed_constraint: ArrayTy(ArrayConstraint::new()) }
-    "boolean" => { ..medium, typed_constraint: BoolTy }
-    "null" => medium
-    "number" =>
-      { ..medium, typed_constraint: NumberTy(NumberConstraint::new()) }
-    "object" =>
-      { ..medium, typed_constraint: ObjectTy(ObjectConstraint::new()) }
-    "string" =>
-      { ..medium, typed_constraint: StringTy(StringConstraint::new()) }
-    _ => panic()
+}
+
+pub fn Keyword::of(arr : Array[KeywordData]) -> Map[String, Keyword] {
+  let map = Map::new()
+  for data in arr {
+    let keyword = Keyword::new(data)
+    map.set(keyword.name, keyword)
   }
-}
-
-/// Return the '$id' property from the schema Json.
-/// 
-/// @alert unsafe "Panic if not exist"
-pub fn id(self : Schema) -> String {
-  self.content["$id"].unwrap().as_string().unwrap()
-}
-
-/// Return the '$comment' property from the schema Json.
-///
-/// @alert unsafe "Panic if not exist"
-pub fn comment(self : Schema) -> String {
-  self.content["$comment"].unwrap().as_string().unwrap()
-}
-
-/// Return the 'title' property from the schema Json.
-/// 
-/// @alert unsafe "Panic if not exist"
-pub fn title(self : Schema) -> String {
-  self.content["title"].unwrap().as_string().unwrap()
-}
-
-/// Return the 'description' property from the schema Json.
-///
-/// @alert unsafe "Panic if not exist"
-pub fn description(self : Schema) -> String {
-  self.content["description"].unwrap().as_string().unwrap()
+  map
 }

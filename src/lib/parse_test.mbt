@@ -1,31 +1,19 @@
-test "parse_array_schema" {
-  @lib.parse!({ "type": "array", "uniqueItems": true }) |> ignore
+test "parse numeric schema" {
+  let s = @lib2.parse!(
+    { "type": "number", "minimum": 1, "exclusiveMaximum": 12 },
+  )
+  let result : @lib2.Schema = {
+    typ: @utils.Left("number"),
+    keywords: @lib2.of([@lib2.ExclusiveMaximum(12), @lib2.Minimum(1)]),
+  }
+  assert_eq!(s, result)
 }
 
-test "parse_number_schema" {
-  @lib.parse!({ "type": "number", "minimum": 0, "maximum": 42 }) |> ignore
-  @lib.parse!(
-    { "type": "number", "exlusiveMinimum": 0, "exclusiveMaximum": 42 },
-  )
-  |> ignore
-}
-
-test "parse_object_schema" {
-  @lib.parse!(
-    {
-      "type": "object",
-      "properties": {
-        "a": { "type": "number", "const": 42 },
-        "b": { "type": "string", "enum": ["test1", "test2"] },
-      },
-    },
-  )
-  |> ignore
-}
-
-test "parse_string_schema" {
-  @lib.parse!(
-    { "type": "string", "minLength": 2, "maxLength": 12, "format": "url" },
-  )
-  |> ignore
+test "parse string-specific schema" {
+  let s = @lib2.parse!({ "type": "string", "maxLength": 12, "minLength": 6 })
+  let result : @lib2.Schema = {
+    typ: @utils.Left("string"),
+    keywords: @lib2.of([@lib2.MaxLength(12), @lib2.MinLength(6)]),
+  }
+  assert_eq!(s, result)
 }
