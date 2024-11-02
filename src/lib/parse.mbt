@@ -1,401 +1,316 @@
-/// Checks if a specified member in a object has a specific type.
-/// 
-/// # Parameters
-/// 
-/// - `member` : The name of the member.
-/// - `specified_ty` : The expected type name of the member.
-/// - `map` : The data of the Json object.
-/// 
-/// # Returns
-/// 
-/// - Optional value if the member matches the type or doesn't exist.
-/// 
-/// # Errors
-/// 
-/// - `ParseError` : If the member exists but does not match the specified type, a `ParseError` is returned with details about the mismatch.
-fn check1(
-  member : String,
-  specified_ty : String,
-  map : Map[String, Json]
-) -> Json?!ParseError {
-  let option = map[member]
-  if option.is_empty() {
-    return None
+fn assert_integer!(n : Double) -> Unit!SchemaParseError {
+  // TODO: Adjust the assertion logic
+  if n - n.to_int().to_double() >= 0.00000001 {
+    raise InvalidSchema
   }
-  let mut result : Result[Unit, ParseError] = Ok(())
-  let value = option.map(
-    fn(value) {
-      let ty_name = type_name(value)
-      if ty_name != specified_ty {
-        result = Err(
-          ParseError::make_member_type_error(member, specified_ty, ty_name),
-        )
-      }
-      value
-    },
-  )
-  result.unwrap_or_error!()
-  value
 }
 
-fn checkn(
-  member : String,
-  specified_tys : Array[String],
-  map : Map[String, Json]
-) -> Json?!ParseError {
-  let option = map[member]
-  if option.is_empty() {
-    return None
-  }
-  let mut result : Result[Unit, ParseError] = Ok(())
-  let value = option.map(
-    fn(value) {
-      let ty_name = type_name(value)
-      let mut invalid = true
-      for ty in specified_tys {
-        if ty == ty_name {
-          invalid = false
-        }
-      }
-      if invalid {
-        let msg = String::concat(
-          specified_tys..mapi_inplace(
-            fn(i, s) {
-              if i == specified_tys.length() - 2 {
-                s + " or " + specified_tys[i + 1]
-              } else if i == specified_tys.length() - 1 {
-                ""
-              } else {
-                s + ", "
-              }
-            },
-          ),
-          separator="",
-        )
-        result = Err(
-          ParseError::make_member_type_error(
-            member,
-            " a value of \{msg}",
-            ty_name,
-          ),
-        )
-      }
-      value
-    },
-  )
-  result.unwrap_or_error!()
-  value
+test "assert integer" {
+  assert_ok!(assert_integer?(1))
+  assert_err!(assert_integer?(1.2))
+  assert_err!(assert_integer?(3.14))
+  assert_ok!(assert_integer?(0.3 - 0.1 + 0.8))
 }
 
-fn parse_schema_value_constraint(
-  medium : Schema,
-  object : Map[String, Json]
-) -> Schema!ParseError {
-  let mut ty_name = medium.type_name
-  if ty_name == "null" {
-    if object["const"].is_empty().not() {
-      ty_name = type_name(object["const"].unwrap())
+pub fn parse!(json : Json) -> Schema!SchemaParseError {
+  let schema : Schema = { typ: Left(""), keywords: {} }
+  match json.value("type") {
+    Some(String(str)) => schema.typ = Left(str)
+    Some(Array(arr1)) => {
+      let arr2 = arr1.map_option(fn(v) { v.as_string() })
+      if arr1.length() != arr2.length() {
+        raise InvalidSchema
+      }
+      schema.typ = Right(arr2)
     }
-    if object["enum_"].is_empty().not() {
-      // TODO: Modify the type of Schema::type_name to Array[String]
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("enum") {
+    Some(Array(arr)) => schema.keywords["enum"] = Keyword::new(Enum(arr))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("const") {
+    Some(v) => schema.keywords["const"] = Keyword::new(Const(v))
+    None => ()
+  }
+  match json.value("default") {
+    Some(v) => schema.keywords["default"] = Keyword::new(Default(v))
+    None => ()
+  }
+  // Parse numeric keywords
+  match json.value("multipleOf") {
+    Some(Number(n)) =>
+      schema.keywords["multipleOf"] = Keyword::new(MultipleOf(n))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("maximum") {
+    Some(Number(n)) => schema.keywords["maximum"] = Keyword::new(Maximum(n))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("exclusiveMaximum") {
+    Some(Number(n)) =>
+      schema.keywords["exclusiveMaximum"] = Keyword::new(ExclusiveMaximum(n))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("minimum") {
+    Some(Number(n)) => schema.keywords["minimum"] = Keyword::new(Minimum(n))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("exclusiveMinimum") {
+    Some(Number(n)) =>
+      schema.keywords["exclusiveMinimum"] = Keyword::new(ExclusiveMinimum(n))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  // Parse string keywords
+  match json.value("maxLength") {
+    // NOTE: 
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["maxLength"] = Keyword::new(MaxLength(n.to_int()))
     }
+    None => ()
+    _ => raise InvalidSchema
   }
-  let constraint = {
-    const: check1!("const", medium.type_name, object),
-    enum_: check1!("enum", "array", object).map(
-      fn(val) { val.as_array().unwrap() },
-    ),
+  match json.value("minLength") {
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["minLength"] = Keyword::new(MinLength(n.to_int()))
+    }
+    None => ()
+    _ => raise InvalidSchema
   }
-  { ..medium, constraint: Some(constraint) }
-}
-
-fn parse_array_schema(
-  medium : Schema,
-  object : Map[String, Json]
-) -> Schema!ParseError {
-  let constraint = {
-    items: match checkn!("items", ["array", "object"], object) {
-      Some(v) =>
-        match v {
-          Array(arr) => {
-            let mut maybe_e : Result[Unit, ParseError] = Ok(())
-            let v = Some(
-              SchemaArray(
-                arr.map_option(
-                  fn(obj) {
-                    parse?(obj).map_err(fn(e) { maybe_e = Err(e) }).to_option()
-                  },
-                ),
-              ),
-            )
-            maybe_e.unwrap_or_error!()
-            v
-          }
-          Object(obj) => Some(SchemaOrSchemaArray::Schema(parse!(Object(obj))))
-          _ => panic()
-        }
-      None => None
-    },
-    minItems: check1!("minItems", "number", object).map_or(
-      0,
-      fn(v) { v.as_number().unwrap().to_int() },
-    ),
-    maxItems: check1!("minItems", "number", object).map(
-      fn(v) { v.as_number().unwrap().to_int() },
-    ),
-    uniqueItems: check1!("uniqueItems", "boolean", object).map_or(
-      false,
-      fn(v) { v.as_bool().unwrap() },
-    ),
+  match json.value("pattern") {
+    Some(String(s)) => schema.keywords["pattern"] = Keyword::new(Pattern(s))
+    None => ()
+    _ => raise InvalidSchema
   }
-  { ..medium, typed_constraint: ArrayTy(constraint) }
-}
-
-fn parse_number_schema(
-  medium : Schema,
-  object : Map[String, Json]
-) -> Schema!ParseError {
-  let constraint = {
-    minimum: check1!("minimum", "number", object).map(
-      fn(v) { v.as_number().unwrap() },
-    ),
-    maximum: check1!("maximum", "number", object).map(
-      fn(v) { v.as_number().unwrap() },
-    ),
-    exclusiveMinimum: check1!("exclusiveMinimum", "number", object).map(
-      fn(v) { v.as_number().unwrap() },
-    ),
-    exclusiveMaximum: check1!("exclusiveMaximum", "number", object).map(
-      fn(v) { v.as_number().unwrap() },
-    ),
+  match json.value("format") {
+    Some(String(s)) => schema.keywords["format"] = Keyword::new(Format(s))
+    None => ()
+    _ => raise InvalidSchema
   }
-  { ..medium, typed_constraint: NumberTy(constraint) }
-}
-
-fn parse_object_schema(
-  medium : Schema,
-  map : Map[String, Json]
-) -> Schema!ParseError {
-  let mut result : Result[Unit, ParseError] = Ok(())
-  let constraint = {
-    minProperties: check1!("minProperties", "number", map).map_or(
-      0,
-      fn(val) { val.as_number().unwrap().to_int() },
-    ),
-    maxProperties: check1!("maxProperties", "number", map).map(
-      fn(val) { val.as_number().unwrap().to_int() },
-    ),
-    required: match check1!("required", "array", map) {
-      None => []
-      Some(val) =>
-        val
-        .as_array()
-        .unwrap()
-        .map_option(
-          fn(item) {
-            item
-            .as_string()
-            .map_or_else(
-              fn() {
-                let ty_name = type_name(item)
-                result = Err(
-                  InvalidItemType(
-                    "Expect a item of type string in 'required', got \{ty_name}",
-                  ),
-                )
-                None
-              },
-              fn(val) { Some(val) },
-            )
-          },
-        )
-    },
-    properties: match check1!("properties", "object", map) {
-      None => {}
-      Some(val) => {
-        let obj = val.as_object().unwrap()
-        let props : Map[String, Property] = {}
-        for key, val in obj {
-          props[key] = parse!(val)
-        }
-        props
+  // Parse array-specific keywords
+  match json.value("items") {
+    Some(Object(_) as v) =>
+      schema.keywords["items"] = Keyword::new(Items(parse!(v)))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("prefixItems") {
+    Some(Array(arr)) => {
+      let prefix = []
+      for v in arr {
+        prefix.push(parse!(v))
       }
-    },
-    // TODO
-    definitions: None,
-    additionalProperties: checkn!(
-      "additionalProperties",
-      ["boolean", "object"],
-      map,
-    ).map_or(
-      Bool(true),
-      fn(val) {
-        match val {
-          True | False as v => Bool(v.as_bool().unwrap())
-          Object(_) =>
-            parse?(val)
-            .map_err(fn(e) { result = Err(e) })
-            .map(fn(v) { BoolOrSchema::Schema(v) })
-            .or(Bool(true))
-          _ => Bool(true)
+      schema.keywords["prefixItems"] = Keyword::new(PrefixItems(prefix))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("contains") {
+    Some(Object(_) as v) =>
+      schema.keywords["contains"] = Keyword::new(Contains(parse!(v)))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("maxItems") {
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["maxItems"] = Keyword::new(MaxItems(n.to_int()))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("minItems") {
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["minItems"] = Keyword::new(MinItems(n.to_int()))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("minContains") {
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["minContains"] = Keyword::new(MinContains(n.to_int()))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("maxContains") {
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["maxContains"] = Keyword::new(MaxContains(n.to_int()))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("uniqueItems") {
+    Some(True) =>
+      schema.keywords["uniqueItems"] = Keyword::new(UniqueItems(true))
+    Some(False) =>
+      schema.keywords["uniqueItems"] = Keyword::new(UniqueItems(false))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  // Parse object-specific keywords
+  match json.value("properties") {
+    Some(Object(obj)) => {
+      let props = {}
+      for k, v in obj {
+        props[k] = parse!(v)
+      }
+      schema.keywords["properties"] = Keyword::new(Properties(props))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("required") {
+    Some(Array(arr)) => {
+      let required = []
+      for v in arr {
+        match v.as_string() {
+          Some(s) => required.push(s)
+          None => raise InvalidSchema
         }
-      },
-    ),
-    patternProperties: check1!("patternProperties", "object", map).map(
-      fn(val) {
-        let obj = val.as_object().unwrap()
-        let keys = obj.keys().collect()
-        let props : Map[String, Property] = {}
-        for i = 0; i < keys.length(); i = i + 1 {
-          let key = keys[i]
-          match parse?(obj[key].unwrap()) {
-            Ok(schema) => props[key] = schema
-            Err(e) => {
-              result = Err(e)
-              break
+      }
+      schema.keywords["required"] = Keyword::new(Required(required))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("dependentRequired") {
+    Some(Object(obj)) => {
+      let dependent = {}
+      for k, v in obj {
+        match v.as_array() {
+          Some(arr) => {
+            let arr2 = arr.map_option(fn(v) { v.as_string() })
+            if arr.length() != arr2.length() {
+              raise InvalidSchema
             }
+            dependent[k] = arr2
           }
+          None => raise InvalidSchema
         }
-        props
-      },
-    ),
-    propertyNames: check1!("propertyNames", "object", map).map_or(
-      None,
-      fn(val) {
-        let obj = val.as_object().unwrap()
-        if obj.get_or_init("type", fn() { "string" }) != "string" {
-          result = Err(
-            InvalidSchema("Invalid 'type' string in 'propertyNames'"),
-          )
-        }
-        parse?(val).map_err(fn(e) { result = Err(e) }).to_option()
-      },
-    ),
-    dependencies: check1!("dependencies", "object", map).map(
-      fn(val) {
-        let obj = val.as_object().unwrap()
-        let deps : Map[String, StringArrayOrSchema] = {}
-        let keys = obj.keys().collect()
-        for i = 0; i < keys.length(); i = i + 1 {
-          let key = keys[i]
-          let maybe_e = checkn?(key, ["object", "array"], obj).map_err(
-            fn(e) { result = Err(e) },
-          )
-          if result.is_err() {
-            return {}
-          }
-          maybe_e
-          .to_option()
-          .map(
-            fn(val) {
-              match val.unwrap() {
-                Array(arr) =>
-                  deps[key] = StringArray(
-                    arr.map_option(
-                      fn(item) {
-                        if result.is_err() {
-                          return None
-                        }
-                        match item.as_string() {
-                          Some(s) => Some(s)
-                          None => {
-                            let ty_name = type_name(item)
-                            result = Err(
-                              InvalidItemType(
-                                "Expect a item of type string in 'required', got \{ty_name}",
-                              ),
-                            )
-                            None
-                          }
-                        }
-                      },
-                    ),
-                  )
-                Object(obj) =>
-                  parse?(Object(obj))
-                  .map_err(fn(e) { result = Err(e) })
-                  .map(fn(sch) { deps[key] = Schema(sch) })
-                  |> ignore
-                _ => panic()
-              }
-            },
-          )
-          |> ignore
-        }
-        deps
-      },
-    ),
-  }
-  result.unwrap_or_error!()
-  { ..medium, typed_constraint: ObjectTy(constraint) }
-}
-
-fn parse_string_schema(
-  medium : Schema,
-  object : Map[String, Json]
-) -> Schema!ParseError {
-  let constraint = {
-    format: check1!("format", "string", object).map(
-      fn(v) { v.as_string().unwrap() },
-    ),
-    pattern: check1!("pattern", "string", object).map(
-      fn(v) { v.as_string().unwrap() },
-    ),
-    minLength: check1!("minLength", "number", object).map_or(
-      0,
-      fn(v) { v.as_number().unwrap().to_int() },
-    ),
-    maxLength: check1!("maxLength", "number", object).map(
-      fn(v) { v.as_number().unwrap().to_int() },
-    ),
-  }
-  { ..medium, typed_constraint: StringTy(constraint) }
-}
-
-/// Parses a Json object to create dchema.
-/// 
-/// # Parameters
-/// 
-/// - `object` : A Json object representing the schema to be parsed.
-/// 
-/// # Returns
-/// 
-/// A `Schema` instance if the parsing is successful.
-/// 
-/// # Errors
-/// 
-/// - `ParseError` : If the Json value is not an valid schema. 
-pub fn parse(object : Json) -> Schema!ParseError {
-  // TODO: Complete
-  match object.as_object() {
-    Some(_) => ()
-    None => {
-      let ty_name = type_name(object)
-      raise InvalidSchema("Expect a Json object, got \{ty_name}")
-    }
-  }
-  let map = object.as_object().unwrap()
-  let mut schema = Schema::new("null")
-  // TODO: Some schema may not need type (through attribute like "const" to infer)
-  match map {
-    { "type": "array" } =>
-      schema = parse_array_schema!(Schema::new("array"), map)
-    { "type": "number" } =>
-      schema = parse_number_schema!(Schema::new("number"), map)
-    { "type": "string" } =>
-      schema = parse_string_schema!(Schema::new("string"), map)
-    { "type": "object" } =>
-      schema = parse_object_schema!(Schema::new("object"), map)
-    { "type"? : None, "const": const } => {
-      map["type"] = String(type_name(const))
-      return parse!(Object(map))
-    }
-    _ =>
-      raise InvalidSchema(
-        "Invalid member 'type', should be one of 'array', 'boolean', 'null', 'number', 'object', 'string'",
+      }
+      schema.keywords["dependentRequired"] = Keyword::new(
+        DependentRequired(dependent),
       )
+    }
+    None => ()
+    _ => raise InvalidSchema
   }
-  schema = parse_schema_value_constraint!(schema, map)
-  schema = { ..schema, content: map }
+  match json.value("dependentSchemas") {
+    Some(Object(obj)) => {
+      let dependent = {}
+      for k, v in obj {
+        dependent[k] = parse!(v)
+      }
+      schema.keywords["dependentSchemas"] = Keyword::new(
+        DependentSchemas(dependent),
+      )
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("additionalProperties") {
+    Some(True) =>
+      schema.keywords["additionalProperties"] = Keyword::new(
+        AdditionalProperties(Left(true)),
+      )
+    Some(False) =>
+      schema.keywords["additionalProperties"] = Keyword::new(
+        AdditionalProperties(Left(false)),
+      )
+    Some(Object(_) as v) =>
+      schema.keywords["additionalProperties"] = Keyword::new(
+        AdditionalProperties(Right(parse!(v))),
+      )
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("minProperties") {
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["minProperties"] = Keyword::new(MinProperties(n.to_int()))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("maxProperties") {
+    Some(Number(n)) => {
+      assert_integer!(n)
+      schema.keywords["maxProperties"] = Keyword::new(MaxProperties(n.to_int()))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  // Parse composition keywords
+  match json.value("allOf") {
+    Some(Array(arr)) => {
+      let all_of = []
+      for v in arr {
+        all_of.push(parse!(v))
+      }
+      schema.keywords["allOf"] = Keyword::new(AllOf(all_of))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("anyOf") {
+    Some(Array(arr)) => {
+      let any_of = []
+      for v in arr {
+        any_of.push(parse!(v))
+      }
+      schema.keywords["anyOf"] = Keyword::new(AnyOf(any_of))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("oneOf") {
+    Some(Array(arr)) => {
+      let one_of = []
+      for v in arr {
+        one_of.push(parse!(v))
+      }
+      schema.keywords["oneOf"] = Keyword::new(OneOf(one_of))
+    }
+    None => ()
+    _ => raise InvalidSchema
+  }
+  // Parse conditional keywords
+  match json.value("not") {
+    Some(Object(_) as v) =>
+      schema.keywords["not"] = Keyword::new(Not(parse!(v)))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("if") {
+    Some(Object(_) as v) => schema.keywords["if"] = Keyword::new(If(parse!(v)))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("then") {
+    Some(Object(_) as v) =>
+      schema.keywords["then"] = Keyword::new(Then(parse!(v)))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  match json.value("else") {
+    Some(Object(_) as v) =>
+      schema.keywords["else"] = Keyword::new(Else(parse!(v)))
+    None => ()
+    _ => raise InvalidSchema
+  }
+  // TODO: Parse structure keywords
   schema
 }
