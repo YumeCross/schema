@@ -52,3 +52,12 @@ pub fn Keyword::new(data : KeywordData) -> Keyword {
     MultipleOf(_) => { name: "multipleOf", data }
   }
 }
+
+pub fn Keyword::of(arr : Array[KeywordData]) -> Map[String, Keyword] {
+  let map = Map::new()
+  for data in arr {
+    let keyword = Keyword::new(data)
+    map.set(keyword.name, keyword)
+  }
+  map
+}

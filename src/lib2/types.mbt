@@ -2,7 +2,7 @@ pub typealias Either[L, R] = @utils.Either[L, R]
 
 pub struct Schema {
   mut typ : Either[String, Array[String]]
-  mut keywords : Map[String, Keyword]
+  keywords : Map[String, Keyword]
 } derive(Eq, Show)
 
 pub struct Keyword {

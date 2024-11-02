@@ -96,6 +96,16 @@ test "validate array contains" {
   assert_false!(s1.validate([1, "2"]).is_ok())
 }
 
+test "validate number" {
+  let s : @lib2.Schema = {
+    typ: @utils.Left("number"),
+    keywords: @lib2.of([@lib2.ExclusiveMaximum(12), @lib2.Minimum(1)]),
+  }
+  assert_ok!(s.validate(11))
+  assert_err!(s.validate(0))
+  assert_err!(s.validate(12))
+}
+
 test "validate string" {
   let s1 : @lib2.Schema = {
     typ: Left("string"),
