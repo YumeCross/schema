@@ -2,22 +2,30 @@
 
 Schema library provides APIs to parse Schema and to validate Json by parsed Schema.
 
-<<<<<<< HEAD
 ## Usages
 
 What is JSON Schema?
 
-[> JSON Schema is the vocabulary that enables JSON data consistency, validity, and interoperability at scale.](https://json-schema.org/)
+> [JSON Schema is the vocabulary that enables JSON data consistency, validity, and interoperability at scale.](https://json-schema.org/)
 
 ### Parse
-=======
-**The module `lib` is out of date. Please use `lib2` instead. And after the parsing is done, `lib2` will take place of the original `lib` completely.**
->>>>>>> ff8ee500a3edc35b9d1b5ff703b0783342fcb235
+
+Use `@lib.parse` to parse a JSON Schema.
+
+## Validate
+
+You can use `@lib.validate` to validate a JSON object by a parsed Schema.
+
+### TODO
+
+1. Support for references is being done.
+2. Using options to control some validation behavior is in planning.
+3. Add documentation.
 
 ## Examples
 
 ```moonbit
-let schema = @schema.parse!({
+let schema = @lib.parse!({
     "$id": "example",
     "type": "object",
     "properties": {
