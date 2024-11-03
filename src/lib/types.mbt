@@ -93,10 +93,6 @@ struct ErrorData {
 
 pub type JsonPointer Array[String] derive(Eq)
 
-pub impl Show for JsonPointer with output(self, logger) {
-  logger.write_string(String::concat(self._, separator="/"))
-}
-
 // TODO: Reimplement
 // struct ValidationErrorData {
 //  instance_path: JsonPath

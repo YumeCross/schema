@@ -322,5 +322,62 @@ test "validate composition" {
 }
 
 test "validate condition" {
-
+  let s1 : @lib.Schema = {
+    typ: Left("object"),
+    keywords: @lib.of(
+      [
+        If(
+          {
+            typ: Left("object"),
+            keywords: @lib.of(
+              [
+                Properties(
+                  {
+                    "cond": { typ: Left(""), keywords: @lib.of([Const(true)]) },
+                  },
+                ),
+              ],
+            ),
+          },
+        ),
+        Then(
+          {
+            typ: Left("object"),
+            keywords: @lib.of(
+              [
+                Properties(
+                  {
+                    "value": {
+                      typ: Left("string"),
+                      keywords: @lib.of([Const("True")]),
+                    },
+                  },
+                ),
+              ],
+            ),
+          },
+        ),
+        Else(
+          {
+            typ: Left("object"),
+            keywords: @lib.of(
+              [
+                Properties(
+                  {
+                    "value": {
+                      typ: Left("string"),
+                      keywords: @lib.of([Const("False")]),
+                    },
+                  },
+                ),
+              ],
+            ),
+          },
+        ),
+      ],
+    ),
+  }
+  assert_ok!(s1.validate({ "cond": True, "value": "True" }))
+  assert_ok!(s1.validate({ "cond": False, "value": "False" }))
+  assert_err!(s1.validate({ "cond": False, "value": "True" }))
 }
