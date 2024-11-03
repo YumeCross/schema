@@ -2,7 +2,7 @@
   "name": "YumeCross/schema",
   "version": "0.4.3",
   "readme": "README.md",
-  "repository": "https://github.com/YumeCross/schema",
+  "repository": "https://github.com/YumeXi/schema",
   "license": "BSD-2-Clause",
   "keywords": ["json", "schema"],
   "description": "Json Schema validation for MoonBit.",

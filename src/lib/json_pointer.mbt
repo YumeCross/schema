@@ -1,6 +1,6 @@
 // NOTE: The whole implementation temporarily assumes that the input is valid at now.
 
-pub fn JsonPointer::parse(str : String) -> JsonPointer {
+pub fn JsonPointer::parse_path(str : String) -> JsonPointer {
   // TODO: Implement relative path parsing
   JsonPointer::parse_abosulute_path(str)
 }
