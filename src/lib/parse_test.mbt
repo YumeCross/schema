@@ -4,7 +4,7 @@ test "parse numeric schema" {
   )
   let result : @lib.Schema = {
     typ: @utils.Left("number"),
-    keywords: @lib.of([@lib.ExclusiveMaximum(12), @lib.Minimum(1)]),
+    keywords: @lib.of([@lib.Minimum(1), @lib.ExclusiveMaximum(12),]),
   }
   assert_eq!(s, result)
 }

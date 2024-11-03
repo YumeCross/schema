@@ -91,7 +91,10 @@ struct ErrorData {
   received : Json?
 } derive(Show)
 
-pub type JsonPointer Array[String] derive(Eq)
+pub enum JsonPointer {
+  AbsolutePath(~id : String, Array[String])
+  RelativePath(Array[String])
+} derive(Eq)
 
 // TODO: Reimplement
 // struct ValidationErrorData {
