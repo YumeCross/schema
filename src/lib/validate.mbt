@@ -1,3 +1,4 @@
+///|
 pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
   if self.typ.left() != Some("") {
     match validate_type(self.typ, json) {
@@ -114,6 +115,7 @@ pub fn validate(self : Schema, json : Json) -> Result[Unit, ValidateError] {
   }
 }
 
+///|
 fn validate_type(
   either : Either[String, Array[String]],
   json : Json
@@ -138,6 +140,7 @@ fn validate_type(
   }
 }
 
+///|
 fn validate_generic(self : Schema, json : Json) -> Result[Unit, ErrorData] {
   match self.keywords["enum"] {
     Some(def) =>
@@ -169,10 +172,11 @@ fn validate_generic(self : Schema, json : Json) -> Result[Unit, ErrorData] {
   }
 }
 
+///|
 fn validate_array(
   self : Keyword,
   json : Json,
-  ~parent : Schema
+  parent~ : Schema
 ) -> Result[Unit, ErrorData] {
   guard let Array(arr) = json else { _ => return Ok(()) }
   match self.data {
@@ -301,6 +305,7 @@ fn validate_array(
   }
 }
 
+///|
 fn validate_number(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
   guard let Number(num) = json else { _ => return Ok(()) }
   match self.data {
@@ -314,6 +319,7 @@ fn validate_number(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
   }
 }
 
+///|
 fn validate_string(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
   guard let String(str) = json else { _ => return Ok(()) }
   match self.data {
@@ -325,10 +331,11 @@ fn validate_string(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
   }
 }
 
+///|
 fn validate_object(
   self : Keyword,
   json : Json,
-  ~parent : Schema
+  parent~ : Schema
 ) -> Result[Unit, ErrorData] {
   guard let Object(obj) = json else { _ => return Ok(()) }
   match self.data {
@@ -455,6 +462,7 @@ fn validate_object(
   }
 }
 
+///|
 fn validate_composition(self : Schema, json : Json) -> Result[Unit, ErrorData] {
   match self.keywords["allOf"] {
     Some(def) =>
@@ -491,6 +499,7 @@ fn validate_composition(self : Schema, json : Json) -> Result[Unit, ErrorData] {
   Ok(())
 }
 
+///|
 fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] {
   match self.data {
     AllOf(schemas) =>
@@ -552,6 +561,7 @@ fn validate_composition(self : Keyword, json : Json) -> Result[Unit, ErrorData] 
   }
 }
 
+///|
 fn validate_condition(self : Schema, json : Json) -> Result[Unit, ErrorData] {
   let mut matched : Bool? = None
   match self.keywords["if"] {

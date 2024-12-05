@@ -4,7 +4,7 @@ test "parse numeric schema" {
   )
   let result : @lib.Schema = {
     typ: @utils.Left("number"),
-    keywords: @lib.of([@lib.Minimum(1), @lib.ExclusiveMaximum(12),]),
+    keywords: @lib.of([@lib.Minimum(1), @lib.ExclusiveMaximum(12)]),
   }
   assert_eq!(s, result)
 }
@@ -42,7 +42,9 @@ test "parse array-specific schema" {
   let s = @lib.parse!({ "type": "array", "items": { "type": "string" } })
   let result : @lib.Schema = {
     typ: @utils.Left("array"),
-    keywords: @lib.of([@lib.Items({ typ: @utils.Left("string"), keywords: {} })]),
+    keywords: @lib.of(
+      [@lib.Items({ typ: @utils.Left("string"), keywords: {} })],
+    ),
   }
   assert_eq!(s, result)
 }

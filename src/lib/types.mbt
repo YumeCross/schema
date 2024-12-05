@@ -1,17 +1,21 @@
+///|
 pub typealias Either[L, R] = @utils.Either[L, R]
 
-pub struct Schema {
+///|
+pub(all) struct Schema {
   mut typ : Either[String, Array[String]]
   keywords : Map[String, Keyword]
 } derive(Eq, Show)
 
-pub struct Keyword {
+///|
+pub(all) struct Keyword {
   /// The keyword name
   name : String
   data : KeywordData
 } derive(Show, Eq)
 
-pub enum KeywordData {
+///|
+pub(all) enum KeywordData {
   // The structure
   Schema(JsonPointer)
   Id(JsonPointer)
@@ -80,10 +84,12 @@ pub enum KeywordData {
   Else(Schema)
 } derive(Eq, Show)
 
-pub type! SchemaParseError {
+///|
+pub(all) type! SchemaParseError {
   InvalidSchema
 } derive(Show)
 
+///|
 struct ErrorData {
   /// The stack of validing schema properties
   stack : Array[String]
@@ -91,10 +97,17 @@ struct ErrorData {
   received : Json?
 } derive(Show)
 
-pub enum JsonPointer {
-  AbsolutePath(~id : String, Array[String])
-  RelativePath(Array[String])
+///|
+pub(all) enum JsonPointer {
+  AbsolutePointer(id~ : String, Array[String])
+  RelativePointer(Array[String])
 } derive(Eq)
+
+///|
+pub(all) type! JsonError {
+  KeyNotFound(path~ : JsonPointer, key~ : String, src~ : Json, Json)
+  InvalidPath(src~ : String)
+} derive(Show)
 
 // TODO: Reimplement
 // struct ValidationErrorData {
@@ -104,4 +117,5 @@ pub enum JsonPointer {
 //
 // } derive(Show)
 
-pub type ValidateError ErrorData derive(Show)
+///|
+pub(all) type ValidateError ErrorData derive(Show)
