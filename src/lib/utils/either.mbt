@@ -1,3 +1,4 @@
+///|
 pub impl[L : Compare, R : Compare] Compare for Either[L, R] with compare(
   self,
   other
@@ -9,6 +10,7 @@ pub impl[L : Compare, R : Compare] Compare for Either[L, R] with compare(
   }
 }
 
+///|
 pub fn is_left[L, R](self : Either[L, R]) -> Bool {
   match self {
     Left(_) => true
@@ -16,6 +18,7 @@ pub fn is_left[L, R](self : Either[L, R]) -> Bool {
   }
 }
 
+///|
 pub fn is_right[L, R](self : Either[L, R]) -> Bool {
   match self {
     Left(_) => false
@@ -23,6 +26,7 @@ pub fn is_right[L, R](self : Either[L, R]) -> Bool {
   }
 }
 
+///|
 pub fn left[L, R](self : Either[L, R]) -> L? {
   match self {
     Left(l) => Some(l)
@@ -30,6 +34,7 @@ pub fn left[L, R](self : Either[L, R]) -> L? {
   }
 }
 
+///|
 pub fn right[L, R](self : Either[L, R]) -> R? {
   match self {
     Left(_) => None
@@ -37,6 +42,7 @@ pub fn right[L, R](self : Either[L, R]) -> R? {
   }
 }
 
+///|
 pub fn flip[L, R](self : Either[L, R]) -> Either[R, L] {
   match self {
     Left(l) => Right(l)
@@ -44,6 +50,7 @@ pub fn flip[L, R](self : Either[L, R]) -> Either[R, L] {
   }
 }
 
+///|
 pub fn map_left[L1, L2, R](
   self : Either[L1, R],
   f : (L1) -> L2
@@ -54,6 +61,7 @@ pub fn map_left[L1, L2, R](
   }
 }
 
+///|
 pub fn map_right[L, R1, R2](
   self : Either[L, R1],
   f : (R1) -> R2
@@ -64,6 +72,7 @@ pub fn map_right[L, R1, R2](
   }
 }
 
+///|
 pub fn map_either[L1, L2, R1, R2](
   self : Either[L1, R1],
   f : (L1) -> L2,
@@ -75,6 +84,7 @@ pub fn map_either[L1, L2, R1, R2](
   }
 }
 
+///|
 pub fn either[L, R, T](self : Either[L, R], f : (L) -> T, g : (R) -> T) -> T {
   match self {
     Left(l) => f(l)
@@ -82,6 +92,7 @@ pub fn either[L, R, T](self : Either[L, R], f : (L) -> T, g : (R) -> T) -> T {
   }
 }
 
+///|
 pub fn and_then[L, R, T](
   self : Either[L, R],
   f : (R) -> Either[L, T]

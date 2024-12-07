@@ -1,3 +1,4 @@
+///|
 fn assert_integer!(n : Double) -> Unit!SchemaParseError {
   // TODO: Adjust the assertion logic
   if n - n.to_int().to_double() >= 0.00000001 {
@@ -12,6 +13,7 @@ test "assert integer" {
   assert_ok!(assert_integer?(0.3 - 0.1 + 0.8))
 }
 
+///|
 pub fn parse!(json : Json) -> Schema!SchemaParseError {
   let schema : Schema = { typ: Left(""), keywords: {} }
   match json.value("type") {

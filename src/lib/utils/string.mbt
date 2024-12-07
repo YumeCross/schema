@@ -1,5 +1,5 @@
 ///|
-pub fn is_nonnegative_integer(str : String) -> Bool {
+pub fn is_unsigned_integer(str : String) -> Bool {
   if str.length() == 0 {
     return false
   }

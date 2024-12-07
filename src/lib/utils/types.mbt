@@ -1,5 +1,5 @@
 ///|
-pub enum Either[L, R] {
+pub(all) enum Either[L, R] {
   Left(L)
   Right(R)
 } derive(Show, Eq)

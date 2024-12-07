@@ -1,4 +1,4 @@
-// NOTE: The whole implementation temporarily assumes that the input is valid at now.
+// NOTE: The whole implementation temporarily assumes that the input is valid at now, except for the unsafe functions.
 
 ///|
 pub fn JsonPointer::parse_pointer(str : String) -> JsonPointer {
@@ -14,11 +14,9 @@ pub fn JsonPointer::parse_pointer(str : String) -> JsonPointer {
   }
 }
 
-///| @alert unsafe ""
+///| @alert unsafe "Panic if invalid invalid string received"
 pub fn JsonPointer::unsafe_parse_abosulute_pointer(str : String) -> JsonPointer {
-  if str.trim_space() == "" {
-    panic()
-  }
+  guard str.is_blank().not() else { panic() }
   let root = match str.index_of("#") {
     -1 => 0
     i => i
@@ -27,24 +25,10 @@ pub fn JsonPointer::unsafe_parse_abosulute_pointer(str : String) -> JsonPointer 
   AbsolutePointer(id=url, str.substring(start=root).split("/").collect())
 }
 
-// @alert unsafe ""
-///|
+///| @alert unsafe "Panic if invalid invalid string received"
 pub fn JsonPointer::unsafe_parse_relative_pointer(str : String) -> JsonPointer {
-  if str.trim_space() == "" {
-    panic()
-  }
-  let path = str.split("/")
-  let collection = []
-  loop path.peek() {
-    None => break RelativePointer(collection)
-    Some(level) => {
-      path.take(1) |> ignore
-      match level.to_array() {
-
-      }
-      continue path.peek()
-    }
-  }
+  guard str.is_blank().not() else { panic() }
+  RelativePointer(str.split("/").collect())
 }
 
 ///|
@@ -62,9 +46,7 @@ pub fn resolve_pointer(self : JsonPointer, path : JsonPointer) -> JsonPointer {
         let i = id1.last_index_of("/")
         AbsolutePointer(id=id1.substring(end=i + 1) + id2, subpath)
       }
-    (AbsolutePointer(id~, path), RelativePointer(subpath)) => ...
-    (RelativePointer(_), RelativePointer(_)) => ...
-    _ => ...
+    _ => panic()
   }
 }
 

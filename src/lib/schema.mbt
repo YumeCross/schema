@@ -1,3 +1,4 @@
+///|
 pub fn Keyword::new(data : KeywordData) -> Keyword {
   match data {
     //
@@ -53,6 +54,7 @@ pub fn Keyword::new(data : KeywordData) -> Keyword {
   }
 }
 
+///|
 pub fn Keyword::of(arr : Array[KeywordData]) -> Map[String, Keyword] {
   let map = Map::new()
   for data in arr {

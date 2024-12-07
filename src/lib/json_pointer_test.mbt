@@ -44,3 +44,10 @@ test "resolve_value" {
   assert_eq!(@lib.parse_pointer("#/foo/baz/qux").resolve_value!(obj), 568)
   assert_eq!(@lib.parse_pointer("#/foo/baz/qzx").resolve_value!(obj), "hello")
 }
+
+test "unsafe_parse_relative_pointer" {
+  inspect!(@lib.unsafe_parse_relative_pointer("1/name"), content="1/name")
+  inspect!(@lib.unsafe_parse_relative_pointer("1/info/"), content="1/info")
+  inspect!(@lib.unsafe_parse_relative_pointer("1#"), content="1#")
+  inspect!(@lib.unsafe_parse_relative_pointer("0-1#"), content="0-1#")
+}
