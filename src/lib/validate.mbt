@@ -622,3 +622,17 @@ fn validate_condition(self : Schema, json : Json) -> Result[Unit, ErrorData] {
     None => Ok(())
   }
 }
+
+fn validate_ref(self : Schema, json : Json) -> Result[Unit, ErrorData] {
+  match self.keywords["$ref"] {
+    Some(def) => {
+      match def.data {
+        Ref(str) => {
+          ...
+        }
+        _ => panic()
+      }
+    }
+    None => Ok(())
+  }
+}
