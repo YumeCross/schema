@@ -1,3 +1,5 @@
+let ref_pool : Ref[Map[String, Schema]] = Ref::new({})
+
 ///|
 fn assert_integer!(n : Double) -> Unit!SchemaParseError {
   // TODO: Adjust the assertion logic
